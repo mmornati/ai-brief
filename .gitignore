@@ -1,10 +1,25 @@
 node_modules/
+coverage/
+
+# Runtime output (gitignored per architecture § Project Structure)
+# The ai-brief-output/steps/.gitkeep placeholder is force-tracked to keep
+# the directory present in fresh clones (git cannot re-include a file under
+# an ignored parent directory via negation rules).
 ai-brief-output/
+
+# Step state markers
 .step-*.completed
 .step-*.failed
+
+# Local environment and IDE config
+.env
+.env.*
+.opencode/
+.agents/
+_bmad/
+.vscode/
+.idea/
 .DS_Store
 *.swp
 *.swo
 *~
-.vscode/
-.idea/

@@ -5,9 +5,9 @@ AI-powered pipeline for generating structured briefs, stories, and development p
 ## Install
 
 ```bash
-git clone <repo-url>
+git clone https://github.com/mmornati/ai-brief.git
 cd ai-brief
-./install.sh
+npm install
 ```
 
 ## Usage

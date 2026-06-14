@@ -4,7 +4,7 @@ baseline_commit: bbc37f10b715ace0313c05cd8d38dbd22ff758c8
 
 # Story 1.1: Project Scaffold & Toolchain
 
-Status: review
+Status: done
 
 ## Story
 
@@ -65,6 +65,31 @@ So that I can start implementing features with a consistent layout and testable 
 ## Change Log
 
 - 2026-06-14: Implemented story 1.1 — project scaffold and toolchain initialized
+
+### Review Findings
+
+- [x] [Review][Patch] .gitignore regression: dropped `.opencode/`, `.agents/`, `_bmad/` [`.gitignore`]
+- [x] [Review][Patch] `ai-brief-output/steps/.gitkeep` was not tracked (parent dir ignored); force-tracked
+- [x] [Review][Patch] README referenced non-existent `./install.sh`; replaced with `npm install` [`README.md`]
+- [x] [Review][Patch] README claimed MIT but no LICENSE file; added MIT LICENSE [`LICENSE`]
+- [x] [Review][Patch] README `<repo-url>` placeholder; replaced with concrete clone URL [`README.md`]
+- [x] [Review][Patch] .gitignore missing `.env*` and `coverage/`; added [`.gitignore`]
+- [x] [Review][Patch] Add targeted CLI dispatch tests (--help, -h, no-args, unknown command, valid command, command shape) [`test/sanity.test.js`]
+- [x] [Review][Defer] `engines.node: ">=18"` is EOL — deferred, pre-existing (spec Dev Notes mandate ">=18") [`package.json`]
+- [x] [Review][Defer] No `bin` field in package.json — deferred, pre-existing (architecture's `install.sh` belongs to a future story) [`package.json`]
+- [x] [Review][Defer] No runtime dependencies — deferred, pre-existing (spec Dev Notes: vitest is dev-only) [`package.json`]
+- [x] [Review][Defer] Stub commands lack TODO markers — deferred, pre-existing (spec Dev Notes: "acceptable for v1") [`src/cli.js`]
+- [x] [Review][Defer] No `--version` / `-V` flag — deferred, pre-existing (not in AC) [`src/cli.js`]
+- [x] [Review][Defer] `isMain` symlink fragility — deferred, pre-existing (spec Dev Notes: bare process.argv, "acceptable for v1") [`src/cli.js:40`]
+- [x] [Review][Defer] No try/catch around `cmd.run()` — deferred, pre-existing (improvement, not required by AC) [`src/cli.js:58`]
+- [x] [Review][Defer] `.step-*.{completed,failed}` convention undocumented — deferred, pre-existing (future story concern) [`.gitignore`]
+- [x] [Review][Defer] No `.nvmrc` — deferred, pre-existing (out of scope for story 1.1)
+- [x] [Review][Defer] No lint/format tooling — deferred, pre-existing (out of scope for story 1.1)
+- [x] [Review][Defer] Missing `repository`/`bugs`/`homepage` in package.json — deferred, pre-existing (out of scope for story 1.1) [`package.json`]
+- [x] [Review][Defer] `src/cli.js` not executable (shebang dead) — deferred, pre-existing (AC #5 specifies `node src/cli.js`) [`src/cli.js`]
+- [x] [Review][Defer] Architecture expects `src/init.js` — deferred, pre-existing (out of scope for story 1.1) [`architecture.md:194`]
+- [x] [Review][Defer] `src/templates/.gitkeep` placeholder not created — deferred, pre-existing (AC #1 satisfied via `default/` and `user/` subdirs)
+- [x] [Review][Defer] Empty `.gitkeep` placeholders may rot — deferred, pre-existing (required by AC #1)
 
 ## Dev Agent Record
 
