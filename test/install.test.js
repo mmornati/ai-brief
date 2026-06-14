@@ -210,4 +210,55 @@ describe('install', () => {
     const { install } = await import('../src/install.js');
     await expect(install(projectDir, { ides: ['opencode'], sourceRoot })).resolves.not.toThrow();
   });
+
+  it('deploys user templates from src/templates/user/', async () => {
+    const sourceRoot = tmpDir;
+    await mkdir(path.join(sourceRoot, 'src', 'templates', 'default'));
+    await mkdir(path.join(sourceRoot, 'src', 'templates', 'user'));
+    fs.writeFileSync(path.join(sourceRoot, 'src', 'templates', 'default', 'brief.md'), '# default brief\n');
+    fs.writeFileSync(path.join(sourceRoot, 'src', 'templates', 'user', 'brief.md'), '# user brief\n');
+    await mkdir(path.join(projectDir, '.opencode'));
+
+    const { install } = await import('../src/install.js');
+    await install(projectDir, { ides: ['opencode'], sourceRoot });
+
+    const userDest = path.join(projectDir, 'ai-brief', 'templates', 'brief', 'user.md');
+    expect(await exists(userDest)).toBe(true);
+    expect(fs.readFileSync(userDest, 'utf-8')).toBe('# user brief\n');
+  });
+
+  it('does not overwrite existing user template at target', async () => {
+    const sourceRoot = tmpDir;
+    await mkdir(path.join(sourceRoot, 'src', 'templates', 'default'));
+    await mkdir(path.join(sourceRoot, 'src', 'templates', 'user'));
+    fs.writeFileSync(path.join(sourceRoot, 'src', 'templates', 'user', 'brief.md'), '# new user content\n');
+
+    const targetUserDir = path.join(projectDir, 'ai-brief', 'templates', 'brief');
+    await mkdir(targetUserDir);
+    fs.writeFileSync(path.join(targetUserDir, 'user.md'), '# existing user content\n');
+    await mkdir(path.join(projectDir, '.opencode'));
+
+    const { install } = await import('../src/install.js');
+    await install(projectDir, { ides: ['opencode'], sourceRoot });
+
+    expect(fs.readFileSync(path.join(targetUserDir, 'user.md'), 'utf-8')).toBe('# existing user content\n');
+  });
+
+  it('preserves existing user templates when deploying default templates', async () => {
+    const sourceRoot = tmpDir;
+    await mkdir(path.join(sourceRoot, 'src', 'templates', 'default'));
+    fs.writeFileSync(path.join(sourceRoot, 'src', 'templates', 'default', 'brief.md'), '# new default\n');
+
+    const targetFormatDir = path.join(projectDir, 'ai-brief', 'templates', 'brief');
+    await mkdir(targetFormatDir);
+    fs.writeFileSync(path.join(targetFormatDir, 'default.md'), '# old default\n');
+    fs.writeFileSync(path.join(targetFormatDir, 'user.md'), '# user override\n');
+    await mkdir(path.join(projectDir, '.opencode'));
+
+    const { install } = await import('../src/install.js');
+    await install(projectDir, { ides: ['opencode'], sourceRoot });
+
+    expect(fs.readFileSync(path.join(targetFormatDir, 'user.md'), 'utf-8')).toBe('# user override\n');
+    expect(fs.readFileSync(path.join(targetFormatDir, 'default.md'), 'utf-8')).toBe('# new default\n');
+  });
 });

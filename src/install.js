@@ -16,6 +16,7 @@ function getSourceDirs(sourceRoot) {
   return {
     skills: path.join(sourceRoot, 'skills'),
     templates: path.join(sourceRoot, 'src', 'templates', 'default'),
+    userTemplates: path.join(sourceRoot, 'src', 'templates', 'user'),
     steps: path.join(sourceRoot, 'steps'),
   };
 }
@@ -63,6 +64,20 @@ async function getTemplateFormats(sourceRoot) {
   }
   const entries = await readdir(sourceDirs.templates);
   return entries.filter(e => e.endsWith('.md'));
+}
+
+async function getUserTemplateFormats(sourceRoot) {
+  const sourceDirs = getSourceDirs(sourceRoot);
+  if (!(await exists(sourceDirs.userTemplates))) {
+    return [];
+  }
+  const entries = await readdir(sourceDirs.userTemplates);
+  return entries.filter(e => e.endsWith('.md'));
+}
+
+async function userTemplateExists(targetDir, formatName) {
+  const dest = path.join(targetDir, TARGET_TEMPLATES_DIR, formatName, 'user.md');
+  return exists(dest);
 }
 
 async function getStepFiles(sourceRoot) {
@@ -117,13 +132,45 @@ async function deployTemplates(targetDir, dryRun, sourceRoot) {
   const templateFormats = await getTemplateFormats(sourceRoot);
   for (const tmplFile of templateFormats) {
     const formatName = path.basename(tmplFile, '.md');
+
     const src = path.join(sourceDirs.templates, tmplFile);
     const dest = path.join(targetDir, TARGET_TEMPLATES_DIR, formatName, 'default.md');
+
+    const userOverrideDest = path.join(targetDir, TARGET_TEMPLATES_DIR, formatName, 'user.md');
+    const hasUserOverride = await exists(userOverrideDest);
+
+    if (hasUserOverride && !dryRun) {
+      console.log(`  preserving user template for ${tmplFile} → ${userOverrideDest}`);
+    }
+
     await copyWithBackup(
       src,
       dest,
       dryRun,
       `deploy template ${tmplFile} → ${dest}`
+    );
+  }
+
+  const userTemplateFormats = await getUserTemplateFormats(sourceRoot);
+  for (const tmplFile of userTemplateFormats) {
+    const formatName = path.basename(tmplFile, '.md');
+    const src = path.join(sourceDirs.userTemplates, tmplFile);
+    const dest = path.join(targetDir, TARGET_TEMPLATES_DIR, formatName, 'user.md');
+
+    if (await exists(dest)) {
+      if (!dryRun) {
+        console.log(`  user template already exists, skipping: ${dest}`);
+      } else {
+        console.log(`[dry-run] would skip existing user template: ${dest}`);
+      }
+      continue;
+    }
+
+    await copyWithBackup(
+      src,
+      dest,
+      dryRun,
+      `deploy user template ${tmplFile} → ${dest}`
     );
   }
 }
