@@ -1,6 +1,6 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { exists, isDir, isFile, copy, backup, readdir, stat } from './utils/file.js';
+import { exists, isDir, isFile, copy, backup, readdir, stat, readFile, writeFile } from './utils/file.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = path.resolve(__dirname, '..');
@@ -200,6 +200,71 @@ async function deployStepPrompts(targetDir, dryRun, sourceRoot) {
   }
 }
 
+async function generateSkillsFromPipeline(targetDir, ides, dryRun, sourceRoot) {
+  const pipelinePath = path.resolve(sourceRoot, 'pipeline-definition', 'pipeline.json');
+  const formatsPath = path.resolve(sourceRoot, 'pipeline-definition', 'formats.json');
+
+  let pipelineRaw, formatsRaw;
+  try {
+    pipelineRaw = await readFile(pipelinePath);
+    formatsRaw = await readFile(formatsPath);
+  } catch {
+    console.warn('  [warn] pipeline-definition not found, skipping skill generation');
+    return;
+  }
+
+  let pipelineDef, formats;
+  try {
+    pipelineDef = JSON.parse(pipelineRaw);
+    formats = JSON.parse(formatsRaw);
+  } catch {
+    console.warn('  [warn] failed to parse pipeline-definition, skipping skill generation');
+    return;
+  }
+
+  const formatDefs = formats.formats || [];
+
+  for (const ide of ides) {
+    let masterGen = null;
+    for (const formatDef of formatDefs) {
+      const generatorPath = path.resolve(sourceRoot, formatDef.orchestrator);
+      let gen;
+      try {
+        gen = await import(generatorPath);
+      } catch {
+        console.warn(`  [warn] could not load generator ${formatDef.orchestrator}, skipping`);
+        continue;
+      }
+
+      if (!masterGen && typeof gen.generateMasterSkill === 'function') {
+        masterGen = gen;
+      }
+
+      if (typeof gen.generateSkill === 'function') {
+        const { skillDir, skillContent } = gen.generateSkill(pipelineDef, formatDef);
+        const dest = resolveSkillDest(targetDir, ide, skillDir);
+        if (dryRun) {
+          console.log(`[dry-run] generate skill ${skillDir} for ${ide} → ${dest}`);
+        } else {
+          await writeFile(dest, skillContent);
+          console.log(`  generated skill ${skillDir} for ${ide} → ${dest}`);
+        }
+      }
+    }
+
+    if (masterGen) {
+      const { skillDir, skillContent } = masterGen.generateMasterSkill(pipelineDef, formatDefs);
+      const dest = resolveSkillDest(targetDir, ide, skillDir);
+      if (dryRun) {
+        console.log(`[dry-run] generate master skill ${skillDir} for ${ide} → ${dest}`);
+      } else {
+        await writeFile(dest, skillContent);
+        console.log(`  generated master skill ${skillDir} for ${ide} → ${dest}`);
+      }
+    }
+  }
+}
+
 export async function install(targetDir, options = {}) {
   const dryRun = options.dryRun || false;
   const ides = options.ides || (await detectIDEs(targetDir));
@@ -223,6 +288,7 @@ export async function install(targetDir, options = {}) {
   await deploySkills(targetDir, ides, dryRun, sourceRoot);
   await deployTemplates(targetDir, dryRun, sourceRoot);
   await deployStepPrompts(targetDir, dryRun, sourceRoot);
+  await generateSkillsFromPipeline(targetDir, ides, dryRun, sourceRoot);
 
   if (!dryRun) {
     console.log('');
