@@ -1,6 +1,10 @@
+---
+baseline_commit: bbc37f10b715ace0313c05cd8d38dbd22ff758c8
+---
+
 # Story 1.1: Project Scaffold & Toolchain
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -19,20 +23,20 @@ So that I can start implementing features with a consistent layout and testable 
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Create directory structure (AC: #1)
-  - [ ] Create `src/pipeline/`, `src/formats/`, `src/templates/default/`, `src/templates/user/`, `src/utils/`
-  - [ ] Create `pipeline-definition/`, `test/`, `ai-brief-output/steps/`, `steps/`
-- [ ] Task 2: Initialize Node.js project (AC: #2)
-  - [ ] Create `package.json` with `"type": "module"` and test scripts
-  - [ ] Install vitest as dev dependency
-  - [ ] Create `vitest.config.js` with defaults
-- [ ] Task 3: Create `.gitignore` (AC: #4)
-- [ ] Task 4: Create stub CLI entry point (AC: #5)
-  - [ ] Create `src/cli.js` with `#!/usr/bin/env node` and basic argument parsing
-  - [ ] Register stubs for `init`, `run`, `status`, `resume` commands (each prints a help message)
-- [ ] Task 5: Create sanity test (AC: #3)
-  - [ ] Create `test/sanity.test.js` that imports from `src/cli.js` and verifies it exports expected command map
-- [ ] Task 6: Create `README.md` (AC: #6)
+- [x] Task 1: Create directory structure (AC: #1)
+  - [x] Create `src/pipeline/`, `src/formats/`, `src/templates/default/`, `src/templates/user/`, `src/utils/`
+  - [x] Create `pipeline-definition/`, `test/`, `ai-brief-output/steps/`, `steps/`
+- [x] Task 2: Initialize Node.js project (AC: #2)
+  - [x] Create `package.json` with `"type": "module"` and test scripts
+  - [x] Install vitest as dev dependency
+  - [x] Create `vitest.config.js` with defaults
+- [x] Task 3: Create `.gitignore` (AC: #4)
+- [x] Task 4: Create stub CLI entry point (AC: #5)
+  - [x] Create `src/cli.js` with `#!/usr/bin/env node` and basic argument parsing
+  - [x] Register stubs for `init`, `run`, `status`, `resume` commands (each prints a help message)
+- [x] Task 5: Create sanity test (AC: #3)
+  - [x] Create `test/sanity.test.js` that imports from `src/cli.js` and verifies it exports expected command map
+- [x] Task 6: Create `README.md` (AC: #6)
 
 ## Dev Notes
 
@@ -58,13 +62,26 @@ So that I can start implementing features with a consistent layout and testable 
 - [Source: architecture.md#Implementation-Patterns--Consistency-Rules]
 - [Source: epics.md#Story-1.1-Project-Scaffold--Toolchain]
 
+## Change Log
+
+- 2026-06-14: Implemented story 1.1 — project scaffold and toolchain initialized
+
 ## Dev Agent Record
 
 ### Agent Model Used
 
+deepseek-v4-flash-free
+
 ### Debug Log References
 
 ### Completion Notes List
+
+- Created project directory structure matching architecture.md project layout
+- Initialized Node.js project with ESM, vitest 3.x, and Node >=18 engine requirement
+- Added `.gitignore` excluding node_modules, ai-brief-output, step markers, and editor files
+- Created stub CLI entry point with `init`, `run`, `status`, `resume` commands and `--help`
+- Added sanity test verifying the commands export map
+- Created README.md with install, usage, and development instructions
 
 ### File List
 
@@ -74,3 +91,11 @@ So that I can start implementing features with a consistent layout and testable 
 - `src/cli.js`
 - `test/sanity.test.js`
 - `README.md`
+- `src/pipeline/.gitkeep`
+- `src/formats/.gitkeep`
+- `src/templates/default/.gitkeep`
+- `src/templates/user/.gitkeep`
+- `src/utils/.gitkeep`
+- `pipeline-definition/.gitkeep`
+- `ai-brief-output/steps/.gitkeep`
+- `steps/.gitkeep`

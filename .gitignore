@@ -1,3 +1,10 @@
-.agents/
-.opencode/
-_bmad/
+node_modules/
+ai-brief-output/
+.step-*.completed
+.step-*.failed
+.DS_Store
+*.swp
+*.swo
+*~
+.vscode/
+.idea/

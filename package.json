@@ -1,0 +1,18 @@
+{
+  "name": "ai-brief",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "AI-powered pipeline for generating briefs, stories, and development plans",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
+  },
+  "devDependencies": {
+    "vitest": "^3.0.0"
+  }
+}
