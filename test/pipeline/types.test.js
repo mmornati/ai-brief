@@ -333,7 +333,7 @@ describe('loadFormatDefinition', () => {
     const result = loadFormatDefinition(FORMATS_PATH);
     expect(result.formats).toHaveLength(2);
     expect(result.formats[0]).toEqual({ name: 'blog', orchestrator: 'src/formats/blog.js' });
-    expect(result.formats[1]).toEqual({ name: 'slides', orchestrator: 'src/formats/claude.js' });
+    expect(result.formats[1]).toEqual({ name: 'slides', orchestrator: 'src/formats/slides.js' });
   });
 
   it('throws for missing file', () => {

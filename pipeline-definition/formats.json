@@ -6,7 +6,7 @@
     },
     {
       "name": "slides",
-      "orchestrator": "src/formats/claude.js"
+      "orchestrator": "src/formats/slides.js"
     }
   ]
 }

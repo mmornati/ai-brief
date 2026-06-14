@@ -1,6 +1,10 @@
+---
+baseline_commit: c041293
+---
+
 # Story 3.2: Slide Deck Writer
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -17,21 +21,21 @@ So that I can present my content using any Marp-compatible renderer.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Create slides format writer (AC: #1, #2)
-  - [ ] Create `src/formats/slides.js` with `render(content, metadata)` function
-  - [ ] Implement content-to-slide segmentation (H2 headers = new slide)
-  - [ ] Generate title slide from input metadata
-  - [ ] Format speaker notes as `<!-- speaker: note text -->`
-  - [ ] Implement template loading via resolver (user → default chain)
-  - [ ] Implement output path: `ai-brief-output/slides/{input-name}-slides.md`
-- [ ] Task 2: Wire into CLI/runner
-  - [ ] Update runner's completion step to call slides writer when `--format slides`
-- [ ] Task 3: Create tests (AC: #3, #4)
-  - [ ] Create `test/formats/slides.test.js`
-  - [ ] Test minimum slide count
-  - [ ] Test speaker note formatting
-  - [ ] Test template fallback
-  - [ ] Test edge case with minimal content
+- [x] Task 1: Create slides format writer (AC: #1, #2)
+  - [x] Create `src/formats/slides.js` with `render(content, metadata)` function
+  - [x] Implement content-to-slide segmentation (H2 headers = new slide)
+  - [x] Generate title slide from input metadata
+  - [x] Format speaker notes as `<!-- speaker: note text -->`
+  - [x] Implement template loading via resolver (user → default chain)
+  - [x] Implement output path: `ai-brief-output/slides/{input-name}-slides.md`
+- [x] Task 2: Wire into CLI/runner
+  - [x] Update runner's completion step to call slides writer when `--format slides`
+- [x] Task 3: Create tests (AC: #3, #4)
+  - [x] Create `test/formats/slides.test.js`
+  - [x] Test minimum slide count
+  - [x] Test speaker note formatting
+  - [x] Test template fallback
+  - [x] Test edge case with minimal content
 
 ## Dev Notes
 
@@ -77,12 +81,25 @@ So that I can present my content using any Marp-compatible renderer.
 
 ### Agent Model Used
 
+qwen/qwen3.7-max
+
 ### Debug Log References
 
 ### Completion Notes List
 
+- Created `src/formats/slides.js` with render/orchestrate exports following blog.js pattern
+- Slide segmentation: H2 headings start new slides, content before first H2 becomes title slide
+- Speaker notes: extracts `Note:` and `[speaker]:` patterns, formats as `<!-- speaker: ... -->`
+- Template: `src/templates/default/slide.md` with Marp frontmatter, `{{slides}}` placeholder
+- Updated `pipeline-definition/formats.json` to point slides orchestrator to `src/formats/slides.js`
+- Updated `test/pipeline/types.test.js` to match new orchestrator path
+- 12 new tests in `test/formats/slides.test.js` covering all ACs
+- All 227 tests pass
+
 ### File List
 
-- `src/formats/slides.js`
-- `src/pipeline/runner.js` (update)
-- `test/formats/slides.test.js`
+- `src/formats/slides.js` (new)
+- `src/templates/default/slide.md` (new)
+- `pipeline-definition/formats.json` (updated)
+- `test/formats/slides.test.js` (new)
+- `test/pipeline/types.test.js` (updated)
