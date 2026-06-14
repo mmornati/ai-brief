@@ -51,33 +51,39 @@ function writeStepOutput(sDir, stepNum, name, content) {
   writeFileSync(resolve(sDir, `${padded}-${name}.md`), content, 'utf-8');
 }
 
-const opts = (od) => ({
+const opts = (od, extra = {}) => ({
   projectRoot: tmpDir,
   stepsDir: od,
+  ...extra,
 });
+
+function stepStates(status) {
+  return status.steps.map(s => `${s.name}:${s.state}`).join(',');
+}
 
 describe('getStatus', () => {
   it('returns all pending when no markers exist', async () => {
     const od = stepsDir('empty-status');
     mkdirSync(od, { recursive: true });
     setupPipeline();
-    const status = await getStatus(opts(od));
-    expect(status.completed).toEqual([]);
-    expect(status.failed).toBeNull();
-    expect(status.pending).toEqual(['validate', 'research', 'structure']);
+    const status = await getStatus(opts(od, { inputFile: 'docs/test.md' }));
+    expect(status.steps).toEqual([
+      { name: 'validate', state: 'pending' },
+      { name: 'research', state: 'pending' },
+      { name: 'structure', state: 'pending' },
+    ]);
     expect(status.outputFile).toBeNull();
   });
 
-  it('reports completed and failed steps correctly', async () => {
+  it('reports completed and failed steps in pipeline order', async () => {
     const od = stepsDir('partial-status');
     mkdirSync(od, { recursive: true });
     setupPipeline();
     writeMarker(od, 1, 'completed');
     writeMarker(od, 2, 'failed');
-    const status = await getStatus(opts(od));
-    expect(status.completed).toEqual(['validate']);
-    expect(status.failed).toBe('research');
-    expect(status.pending).toEqual(['research', 'structure']);
+    const status = await getStatus(opts(od, { inputFile: 'docs/test.md' }));
+    expect(stepStates(status)).toBe('validate:completed,research:failed,structure:pending');
+    expect(status.outputFile).toBeNull();
   });
 
   it('reports all completed steps', async () => {
@@ -87,10 +93,20 @@ describe('getStatus', () => {
     writeMarker(od, 1, 'completed');
     writeMarker(od, 2, 'completed');
     writeMarker(od, 3, 'completed');
-    const status = await getStatus(opts(od));
-    expect(status.completed).toEqual(['validate', 'research', 'structure']);
-    expect(status.failed).toBeNull();
-    expect(status.pending).toEqual([]);
+    const status = await getStatus(opts(od, { inputFile: 'docs/test.md', format: 'blog' }));
+    expect(stepStates(status)).toBe('validate:completed,research:completed,structure:completed');
+    expect(status.outputFile).toBe(resolve(tmpDir, 'ai-brief-output', 'blog', 'test-blog.md'));
+  });
+
+  it('outputFile is null when pipeline complete but format missing', async () => {
+    const od = stepsDir('all-completed-no-format');
+    mkdirSync(od, { recursive: true });
+    setupPipeline();
+    writeMarker(od, 1, 'completed');
+    writeMarker(od, 2, 'completed');
+    writeMarker(od, 3, 'completed');
+    const status = await getStatus(opts(od, { inputFile: 'docs/test.md' }));
+    expect(status.outputFile).toBeNull();
   });
 
   it('failed marker takes precedence over completed', async () => {
@@ -99,19 +115,43 @@ describe('getStatus', () => {
     setupPipeline();
     writeMarker(od, 1, 'completed');
     writeMarker(od, 1, 'failed');
-    const status = await getStatus(opts(od));
-    expect(status.completed).toEqual([]);
-    expect(status.failed).toBe('validate');
-    expect(status.pending).toEqual(['validate', 'research', 'structure']);
+    const status = await getStatus(opts(od, { inputFile: 'docs/test.md' }));
+    expect(stepStates(status)).toBe('validate:failed,research:pending,structure:pending');
+  });
+
+  it('handles some completed and some pending without failure', async () => {
+    const od = stepsDir('completed-and-pending');
+    mkdirSync(od, { recursive: true });
+    setupPipeline();
+    writeMarker(od, 1, 'completed');
+    const status = await getStatus(opts(od, { inputFile: 'docs/test.md' }));
+    expect(stepStates(status)).toBe('validate:completed,research:pending,structure:pending');
   });
 
   it('handles non-existent steps directory', async () => {
     const od = stepsDir('nonexistent-dir');
     setupPipeline();
-    const status = await getStatus(opts(od));
-    expect(status.completed).toEqual([]);
-    expect(status.failed).toBeNull();
-    expect(status.pending).toEqual(['validate', 'research', 'structure']);
+    const status = await getStatus(opts(od, { inputFile: 'docs/test.md' }));
+    expect(stepStates(status)).toBe('validate:pending,research:pending,structure:pending');
+  });
+
+  it('ignores stale markers beyond current pipeline length', async () => {
+    const od = stepsDir('stale-markers');
+    mkdirSync(od, { recursive: true });
+    setupPipeline();
+    writeMarker(od, 1, 'completed');
+    writeMarker(od, 99, 'failed');
+    const status = await getStatus(opts(od, { inputFile: 'docs/test.md' }));
+    expect(stepStates(status)).toBe('validate:completed,research:pending,structure:pending');
+  });
+
+  it('ignores .step-0 markers', async () => {
+    const od = stepsDir('zero-marker');
+    mkdirSync(od, { recursive: true });
+    setupPipeline();
+    writeMarker(od, 0, 'completed');
+    const status = await getStatus(opts(od, { inputFile: 'docs/test.md' }));
+    expect(stepStates(status)).toBe('validate:pending,research:pending,structure:pending');
   });
 });
 
@@ -149,6 +189,11 @@ describe('getFailedStep', () => {
 });
 
 describe('isComplete', () => {
+  it('returns false when no steps defined', async () => {
+    setupPipeline([]);
+    expect(await isComplete(opts(stepsDir('empty-pipeline')))).toBe(false);
+  });
+
   it('returns false when no steps completed', async () => {
     setupPipeline();
     expect(await isComplete(opts(stepsDir('not-complete')))).toBe(false);
@@ -174,24 +219,40 @@ describe('isComplete', () => {
 });
 
 describe('resume', () => {
-  it('throws when pipeline is already complete', async () => {
+  it('throws with PIPELINE_COMPLETE code when pipeline is already complete', async () => {
     const od = stepsDir('resume-complete');
     mkdirSync(od, { recursive: true });
     setupPipeline();
     writeMarker(od, 1, 'completed');
     writeMarker(od, 2, 'completed');
     writeMarker(od, 3, 'completed');
-    await expect(resume('docs/test.md', 'blog', opts(od))).rejects.toThrow('Pipeline already complete');
+    let caught;
+    try {
+      await resume('docs/test.md', 'blog', opts(od));
+    } catch (err) {
+      caught = err;
+    }
+    expect(caught).toBeDefined();
+    expect(caught.code).toBe('PIPELINE_COMPLETE');
+    expect(caught.message).toMatch(/Pipeline already complete/);
   });
 
-  it('throws when no pipeline run in progress', async () => {
+  it('throws with NO_RUN code when no pipeline run in progress', async () => {
     const od = stepsDir('resume-never-started');
     mkdirSync(od, { recursive: true });
     setupPipeline();
-    await expect(resume('docs/test.md', 'blog', opts(od))).rejects.toThrow('No pipeline run in progress');
+    let caught;
+    try {
+      await resume('docs/test.md', 'blog', opts(od));
+    } catch (err) {
+      caught = err;
+    }
+    expect(caught).toBeDefined();
+    expect(caught.code).toBe('NO_RUN');
+    expect(caught.message).toMatch(/No pipeline run in progress/);
   });
 
-  it('resumes from failed step with accumulated context', async () => {
+  it('resumes from failed step with last completed step as context', async () => {
     const od = stepsDir('resume-failed');
     mkdirSync(od, { recursive: true });
     setupPipeline();
@@ -223,6 +284,32 @@ describe('resume', () => {
     expect(stepOutput).toContain('RESUMED_');
     expect(stepOutput).toContain('STRUCTURE_PROMPT');
     expect(stepOutput).toContain('RESEARCH OUTPUT');
+    expect(stepOutput).not.toContain('VALIDATE OUTPUT');
+  });
+
+  it('falls back to input file when no completed step precedes resume target', async () => {
+    const od = stepsDir('resume-gap');
+    mkdirSync(od, { recursive: true });
+    setupPipeline();
+    writeMarker(od, 2, 'failed');
+    writeStepOutput(od, 1, 'validate', 'SHOULD_NOT_USE_THIS');
+
+    const steps = [
+      { name: 'validate', promptFile: 'steps/validate.md', description: 'V' },
+      { name: 'research', promptFile: 'steps/research.md', description: 'R' },
+    ];
+    write(['pipeline-definition', 'pipeline.json'], JSON.stringify({ steps }));
+    write(['steps', 'research.md'], 'RESEARCH_PROMPT');
+
+    const customFn = async (prompt) => prompt;
+    await resume('docs/test.md', 'blog', {
+      ...opts(od),
+      executePrompt: customFn,
+    });
+
+    const out = readFileSync(resolve(od, '02-research.md'), 'utf-8');
+    expect(out).toContain('# Test Input');
+    expect(out).not.toContain('SHOULD_NOT_USE_THIS');
   });
 
   it('resumes from first pending step when no failed marker', async () => {

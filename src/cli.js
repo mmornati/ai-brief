@@ -8,14 +8,37 @@ function parseArgs(args) {
   let format = null;
 
   for (let i = 0; i < args.length; i++) {
-    if (args[i] === '--format') {
-      format = args[++i];
-    } else if (!inputFile && !args[i].startsWith('--')) {
-      inputFile = args[i];
+    const arg = args[i];
+    if (arg === '--format' || arg === '-f') {
+      const next = args[++i];
+      if (next === undefined) {
+        throw new Error('--format requires a value');
+      }
+      format = next;
+    } else if (arg.startsWith('--format=')) {
+      const value = arg.slice('--format='.length);
+      if (value === '') {
+        throw new Error('--format requires a value');
+      }
+      format = value;
+    } else if (!arg.startsWith('--') && !arg.startsWith('-') && inputFile === null) {
+      inputFile = arg;
     }
   }
 
   return { inputFile, format };
+}
+
+function formatStatusLine(idx, step) {
+  const num = String(idx + 1).padStart(2, ' ');
+  const name = step.name.padEnd(12);
+  if (step.state === 'completed') {
+    return `  ✅ ${num}. ${name} — completed`;
+  }
+  if (step.state === 'failed') {
+    return `  ❌ ${num}. ${name} — FAILED (see .step-${idx + 1}.failed)`;
+  }
+  return `  ⏳ ${num}. ${name} — pending`;
 }
 
 export const commands = {
@@ -28,19 +51,26 @@ export const commands = {
   run: {
     description: 'Execute the full pipeline on a markdown input file',
     run(rawArgs) {
-      const { inputFile, format } = parseArgs(rawArgs);
+      let parsed;
+      try {
+        parsed = parseArgs(rawArgs);
+      } catch (err) {
+        console.error(err.message);
+        process.exit(1);
+        return;
+      }
 
-      if (!format) {
+      if (!parsed.format) {
         console.error('--format is required (blog|slides)');
         process.exit(1);
       }
 
-      if (!inputFile) {
+      if (!parsed.inputFile) {
         console.error('Usage: ai-brief run <input-file> --format <format>');
         process.exit(1);
       }
 
-      runPipeline(inputFile, format).catch(err => {
+      runPipeline(parsed.inputFile, parsed.format).catch(err => {
         console.error(err.message);
         process.exit(1);
       });
@@ -49,47 +79,41 @@ export const commands = {
   status: {
     description: 'Show current pipeline status',
     async run(rawArgs) {
-      const { inputFile } = parseArgs(rawArgs);
+      let parsed;
+      try {
+        parsed = parseArgs(rawArgs);
+      } catch (err) {
+        console.error(err.message);
+        process.exit(1);
+        return;
+      }
 
-      if (!inputFile) {
-        console.error('Usage: ai-brief status <input-file>');
+      if (!parsed.inputFile) {
+        console.error('Usage: ai-brief status <input-file> [--format <format>]');
         process.exit(1);
       }
 
       try {
-        const status = await getStatus();
+        const status = await getStatus({
+          inputFile: parsed.inputFile,
+          format: parsed.format,
+        });
 
-        if (status.completed.length === 0 && !status.failed) {
-          console.log(`Pipeline status for ${inputFile}:`);
+        const allCompleted = status.steps.length > 0 && status.steps.every(s => s.state === 'completed');
+        const hasAnyState = status.steps.some(s => s.state !== 'pending');
+
+        console.log(`Pipeline status for ${parsed.inputFile}:`);
+        if (!hasAnyState) {
           console.log('  No pipeline run in progress.');
           return;
         }
 
-        const stepNames = [...status.completed, ...(status.failed ? [status.failed] : []), ...status.pending];
-        const allStepNames = status.completed.concat(status.failed ? [status.failed] : []).concat(status.pending);
-        const seen = new Set();
-        const allSteps = [];
-        for (const name of [...status.completed, ...(status.failed ? [status.failed] : []), ...status.pending]) {
-          if (!seen.has(name)) {
-            seen.add(name);
-            allSteps.push(name);
-          }
-        }
-
-        console.log(`Pipeline status for ${inputFile}:`);
-        for (let i = 0; i < allSteps.length; i++) {
-          const name = allSteps[i];
-          const num = String(i + 1).padStart(2, ' ');
-          if (status.completed.includes(name)) {
-            console.log(`  ✅ ${num}. ${name.padEnd(12)} — completed`);
-          } else if (status.failed === name) {
-            console.log(`  ❌ ${num}. ${name.padEnd(12)} — FAILED (see .step-${i + 1}.failed)`);
-          } else {
-            console.log(`  ⏳ ${num}. ${name.padEnd(12)} — pending`);
-          }
+        for (let i = 0; i < status.steps.length; i++) {
+          console.log(formatStatusLine(i, status.steps[i]));
         }
         if (status.outputFile) {
-          console.log(`Output: ${status.outputFile}`);
+          const suffix = allCompleted ? '' : ' (pending)';
+          console.log(`Output: ${status.outputFile}${suffix}`);
         }
       } catch (err) {
         console.error(err.message);
@@ -100,23 +124,30 @@ export const commands = {
   resume: {
     description: 'Resume a paused pipeline from the last completed step',
     async run(rawArgs) {
-      const { inputFile, format } = parseArgs(rawArgs);
+      let parsed;
+      try {
+        parsed = parseArgs(rawArgs);
+      } catch (err) {
+        console.error(err.message);
+        process.exit(1);
+        return;
+      }
 
-      if (!format) {
+      if (!parsed.format) {
         console.error('--format is required (blog|slides)');
         process.exit(1);
       }
 
-      if (!inputFile) {
+      if (!parsed.inputFile) {
         console.error('Usage: ai-brief resume <input-file> --format <format>');
         process.exit(1);
       }
 
       try {
-        await resumePipeline(inputFile, format);
+        await resumePipeline(parsed.inputFile, parsed.format);
       } catch (err) {
-        if (err.message === 'Pipeline already complete' || err.message === 'No pipeline run in progress') {
-          console.log(err.message);
+        if (err.code === 'PIPELINE_COMPLETE' || err.code === 'NO_RUN' || err.code === 'NO_PIPELINE') {
+          console.error(err.message);
           process.exit(1);
         }
         console.error(err.message);
@@ -141,6 +172,7 @@ function printHelp() {
   console.log('  ai-brief run docs/idea.md --format blog');
   console.log('  ai-brief run docs/idea.md --format slides');
   console.log('  ai-brief status docs/idea.md');
+  console.log('  ai-brief status docs/idea.md --format blog');
   console.log('  ai-brief resume docs/idea.md --format blog');
 }
 

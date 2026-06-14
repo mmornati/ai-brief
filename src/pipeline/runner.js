@@ -27,7 +27,7 @@ export async function runPipeline(inputFile, format, options = {}) {
   const outDir = options.outDir || path.resolve(projectRoot, 'ai-brief-output', 'steps');
   const pipelinePath = options.pipelinePath || path.resolve(projectRoot, 'pipeline-definition', 'pipeline.json');
   const formatsPath = options.formatsPath || path.resolve(projectRoot, 'pipeline-definition', 'formats.json');
-  const startFrom = options.startFrom ?? 0;
+  const startFrom = Math.max(0, options.startFrom ?? 0);
   const accumulatedContext = options.accumulatedContext;
 
   const steps = await loadSteps(pipelinePath);
