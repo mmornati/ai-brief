@@ -1,6 +1,10 @@
+---
+baseline_commit: 5bb6a687d37976609c64056ee3f229819785bacc
+---
+
 # Story 1.4: Step Prompts & Templates
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -18,18 +22,18 @@ So that the pipeline has content to work with from the start.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Create step prompt files (AC: #1, #4, #5)
-  - [ ] Write `steps/validate.md` — validate input structure, spelling, completeness
-  - [ ] Write `steps/research.md` — research domain, find relevant sources
-  - [ ] Write `steps/structure.md` — build outline from research + input
-  - [ ] Write `steps/write.md` — compose full content from outline
-  - [ ] Write `steps/format.md` — apply template format (blog/slides)
-  - [ ] Write `steps/review.md` — adversarial review pass, polish
-- [ ] Task 2: Create default templates (AC: #2)
-  - [ ] Write `src/templates/default/brief.md` — frontmatter + sections
-  - [ ] Write `src/templates/default/story.md` — story template
-  - [ ] Write `src/templates/default/slide.md` — Marp-compatible slides
-- [ ] Task 3: Verify naming conventions (AC: #3)
+- [x] Task 1: Create step prompt files (AC: #1, #4, #5)
+  - [x] Write `steps/validate.md` — validate input structure, spelling, completeness
+  - [x] Write `steps/research.md` — research domain, find relevant sources
+  - [x] Write `steps/structure.md` — build outline from research + input
+  - [x] Write `steps/write.md` — compose full content from outline
+  - [x] Write `steps/format.md` — apply template format (blog/slides)
+  - [x] Write `steps/review.md` — adversarial review pass, polish
+- [x] Task 2: Create default templates (AC: #2)
+  - [x] Write `src/templates/default/brief.md` — frontmatter + sections
+  - [x] Write `src/templates/default/story.md` — story template
+  - [x] Write `src/templates/default/slide.md` — Marp-compatible slides
+- [x] Task 3: Verify naming conventions (AC: #3)
 
 ## Dev Notes
 
@@ -56,9 +60,18 @@ So that the pipeline has content to work with from the start.
 
 ### Agent Model Used
 
+deepseek-v4-flash-free
+
 ### Debug Log References
 
+- All 92 tests passing (28 new for story 1.4, 64 existing)
+
 ### Completion Notes List
+
+1. Created 6 step prompt files in `steps/` — each with step-specific instructions for the AI assistant, following the pattern of reading accumulated context, performing the step's operation, outputting as markdown, and including accumulated content
+2. Created 3 default templates in `src/templates/default/` — `brief.md` with YAML frontmatter and structured sections, `story.md` with standard story template, `slide.md` with Marp-compatible format and speaker notes
+3. Created `test/steps-and-templates.test.js` with 28 tests covering all acceptance criteria (file existence, content validation, naming conventions, format checks)
+4. Verified all step names in pipeline.json match actual step files
 
 ### File List
 
@@ -71,3 +84,8 @@ So that the pipeline has content to work with from the start.
 - `src/templates/default/brief.md`
 - `src/templates/default/story.md`
 - `src/templates/default/slide.md`
+- `test/steps-and-templates.test.js`
+
+## Change Log
+
+- Implemented story 1.4: created 6 step prompt files (validate, research, structure, write, format, review), 3 default templates (brief, story, slide), and 28 tests validating all acceptance criteria (2026-06-14)
