@@ -1,6 +1,10 @@
+---
+baseline_commit: 448e3f6e9cc34aa691599c8e35de7c10529b2482
+---
+
 # Story 2.2: Pipeline Runner
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -19,20 +23,20 @@ So that my rough notes are transformed into structured content through a series 
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Update CLI entry point (AC: #5, #6)
-  - [ ] Update `src/cli.js` with proper `run`, `status`, `resume` command routing
-  - [ ] Implement `--help`, `--format` flags
-  - [ ] Validate required `--format` argument
-- [ ] Task 2: Create pipeline runner (AC: #1-4)
-  - [ ] Create `src/pipeline/runner.js` with `runPipeline(inputFile, format)` function
-  - [ ] Step execution loop: for each step, read prompt, pass accumulated content, write output
-  - [ ] Intermediate output file naming: `ai-brief-output/steps/{n}-{step-name}.md`
-  - [ ] Marker file creation: `.step-{n}.completed` / `.step-{n}.failed`
-  - [ ] Error handling: catch per-step errors, write `.failed` marker, stop pipeline
-- [ ] Task 3: Create tests (AC: verified)
-  - [ ] Create `test/pipeline/runner.test.js`
-  - [ ] Mock step definitions, test happy path, error path, format selection
-  - [ ] Test marker file creation in temp directories
+- [x] Task 1: Update CLI entry point (AC: #5, #6)
+  - [x] Update `src/cli.js` with proper `run`, `status`, `resume` command routing
+  - [x] Implement `--help`, `--format` flags
+  - [x] Validate required `--format` argument
+- [x] Task 2: Create pipeline runner (AC: #1-4)
+  - [x] Create `src/pipeline/runner.js` with `runPipeline(inputFile, format)` function
+  - [x] Step execution loop: for each step, read prompt, pass accumulated content, write output
+  - [x] Intermediate output file naming: `ai-brief-output/steps/{n}-{step-name}.md`
+  - [x] Marker file creation: `.step-{n}.completed` / `.step-{n}.failed`
+  - [x] Error handling: catch per-step errors, write `.failed` marker, stop pipeline
+- [x] Task 3: Create tests (AC: verified)
+  - [x] Create `test/pipeline/runner.test.js`
+  - [x] Mock step definitions, test happy path, error path, format selection
+  - [x] Test marker file creation in temp directories
 
 ## Dev Notes
 
@@ -70,18 +74,31 @@ So that my rough notes are transformed into structured content through a series 
 - [Source: architecture.md#Integration-Points]
 - [Source: epics.md#Story-2.2-Pipeline-Runner]
 
+## Change Log
+
+- Implemented CLI `run` command with `--format` flag validation (2026-06-14)
+- Implemented pipeline runner with step execution loop, output/marker files, error handling (2026-06-14)
+- Added comprehensive runner tests covering happy path, failure, format selection, custom executePrompt (2026-06-14)
+
 ## Dev Agent Record
 
 ### Agent Model Used
 
+deepseek-v4-flash-free
+
 ### Debug Log References
 
+- Debugged runner output path resolution (`outDir` always appended `steps` segment, fixed by making `outDir` fully configurable via options)
+
 ### Completion Notes List
+
+- Implemented Pipeline Runner story 2.2:
+  - Updated `src/cli.js` with proper `run` command that accepts `<inputFile>` and `--format <format>`, validates required `--format`, and invokes `runPipeline`
+  - Created `src/pipeline/runner.js` with `runPipeline(inputFile, format, options?)` that: loads steps from pipeline-definition, reads step prompts, passes accumulated content through steps, writes output + marker files, handles errors with `.failed` markers, and calls format orchestrator on completion
+  - Created `test/pipeline/runner.test.js` with 7 tests covering: full step execution, content accumulation, failure handling, unknown format rejection, empty steps, custom executePrompt injection, and format orchestrator invocation
 
 ### File List
 
 - `src/cli.js` (update)
 - `src/pipeline/runner.js`
-- `src/utils/file.js` (extend)
-- `src/utils/paths.js` (extend)
 - `test/pipeline/runner.test.js`

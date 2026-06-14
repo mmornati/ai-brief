@@ -1,5 +1,21 @@
 #!/usr/bin/env node
 import { fileURLToPath } from 'url';
+import { runPipeline } from './pipeline/runner.js';
+
+function parseArgs(args) {
+  let inputFile = null;
+  let format = null;
+
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === '--format') {
+      format = args[++i];
+    } else if (!inputFile && !args[i].startsWith('--')) {
+      inputFile = args[i];
+    }
+  }
+
+  return { inputFile, format };
+}
 
 export const commands = {
   init: {
@@ -9,9 +25,24 @@ export const commands = {
     },
   },
   run: {
-    description: 'Execute the full pipeline',
-    run() {
-      console.log('ai-brief run: Execute the full pipeline');
+    description: 'Execute the full pipeline on a markdown input file',
+    run(rawArgs) {
+      const { inputFile, format } = parseArgs(rawArgs);
+
+      if (!format) {
+        console.error('--format is required (blog|slides)');
+        process.exit(1);
+      }
+
+      if (!inputFile) {
+        console.error('Usage: ai-brief run <input-file> --format <format>');
+        process.exit(1);
+      }
+
+      runPipeline(inputFile, format).catch(err => {
+        console.error(err.message);
+        process.exit(1);
+      });
     },
   },
   status: {
@@ -35,6 +66,9 @@ function printHelp() {
   for (const [name, cmd] of Object.entries(commands)) {
     console.log(`  ${name.padEnd(10)} ${cmd.description}`);
   }
+  console.log('');
+  console.log('Options:');
+  console.log('  --format <format>   Output format (blog|slides)');
 }
 
 const isMain = process.argv[1] === fileURLToPath(import.meta.url);
@@ -55,5 +89,5 @@ if (isMain) {
     process.exit(1);
   }
 
-  cmd.run();
+  cmd.run(args.slice(1));
 }
