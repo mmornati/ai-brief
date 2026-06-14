@@ -74,6 +74,17 @@ So that my rough notes are transformed into structured content through a series 
 - [Source: architecture.md#Integration-Points]
 - [Source: epics.md#Story-2.2-Pipeline-Runner]
 
+### Review Findings
+
+- [x] [Review][Patch] Step index inconsistency between output filenames and marker files [src/pipeline/runner.js:47]
+- [x] [Review][Patch] `runPipeline` silently swallows step failures, causing CLI to exit 0 on failure [src/pipeline/runner.js:68-73]
+- [x] [Review][Patch] Test 'stops on step failure' should expect throw and assert `console.error` was called [test/pipeline/runner.test.js:82-109]
+- [x] [Review][Patch] CLI help lacks Examples section; `--format` shown as global option is misleading [src/cli.js:62-72]
+- [x] [Review][Defer] Stale state cleanup on pipeline re-run (out of scope — resume is story 2.3) — deferred, pre-existing
+- [x] [Review][Defer] `parseArgs` doesn't support `--format=value` equals form (minor, out of scope) — deferred, pre-existing
+- [x] [Review][Defer] Dynamic `import(absPath)` caches modules — orchestrator hot-reload not supported (edge case) — deferred, pre-existing
+- [x] [Review][Defer] `inputFile` accepts absolute paths and `..` traversal (user-controlled CLI, low risk) — deferred, pre-existing
+
 ## Change Log
 
 - Implemented CLI `run` command with `--format` flag validation (2026-06-14)

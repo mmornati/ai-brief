@@ -44,7 +44,7 @@ export async function runPipeline(inputFile, format, options = {}) {
   const padded = (i) => String(i + 1).padStart(2, '0');
 
   function markerPath(i, suffix) {
-    return path.resolve(outDir, `.step-${i}.${suffix}`);
+    return path.resolve(outDir, `.step-${i + 1}.${suffix}`);
   }
 
   function outputPath(i, stepName) {
@@ -69,7 +69,9 @@ export async function runPipeline(inputFile, format, options = {}) {
       const errorMsg = `Step "${step.name}" failed: ${err.message}`;
       console.error(errorMsg);
       await writeFile(markerPath(i, 'failed'), errorMsg);
-      return;
+      const wrapped = new Error(errorMsg);
+      wrapped.cause = err;
+      throw wrapped;
     }
   }
 

@@ -51,8 +51,8 @@ describe('runPipeline', () => {
 
     expect(existsSync(resolve(od, '01-validate.md'))).toBe(true);
     expect(existsSync(resolve(od, '02-research.md'))).toBe(true);
-    expect(existsSync(resolve(od, '.step-0.completed'))).toBe(true);
     expect(existsSync(resolve(od, '.step-1.completed'))).toBe(true);
+    expect(existsSync(resolve(od, '.step-2.completed'))).toBe(true);
   });
 
   it('passes accumulated content through steps', async () => {
@@ -79,7 +79,7 @@ describe('runPipeline', () => {
     expect(stepOutput).toContain('INPUT_TEXT');
   });
 
-  it('stops on step failure and writes failed marker', async () => {
+  it('stops on step failure, writes failed marker, and throws', async () => {
     write(['pipeline-definition', 'pipeline.json'], JSON.stringify({
       steps: [
         { name: 'validate', promptFile: 'steps/nope.md', description: 'Validate' },
@@ -94,16 +94,17 @@ describe('runPipeline', () => {
     const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
     const od = outDir('steps3');
 
-    await runPipeline('docs/fail.md', 'blog', {
+    await expect(runPipeline('docs/fail.md', 'blog', {
       projectRoot: tmpDir,
       outDir: od,
-    });
+    })).rejects.toThrow(/Step "validate" failed/);
 
-    expect(existsSync(resolve(od, '.step-0.completed'))).toBe(false);
-    expect(existsSync(resolve(od, '.step-0.failed'))).toBe(true);
+    expect(existsSync(resolve(od, '.step-1.completed'))).toBe(false);
+    expect(existsSync(resolve(od, '.step-1.failed'))).toBe(true);
 
-    const failedContent = readFileSync(resolve(od, '.step-0.failed'), 'utf-8');
+    const failedContent = readFileSync(resolve(od, '.step-1.failed'), 'utf-8');
     expect(failedContent).toContain('Step "validate" failed');
+    expect(spy).toHaveBeenCalledWith(expect.stringContaining('Step "validate" failed'));
 
     spy.mockRestore();
   });

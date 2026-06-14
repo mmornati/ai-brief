@@ -67,8 +67,12 @@ function printHelp() {
     console.log(`  ${name.padEnd(10)} ${cmd.description}`);
   }
   console.log('');
-  console.log('Options:');
+  console.log('Run command options:');
   console.log('  --format <format>   Output format (blog|slides)');
+  console.log('');
+  console.log('Examples:');
+  console.log('  ai-brief run docs/idea.md --format blog');
+  console.log('  ai-brief run docs/idea.md --format slides');
 }
 
 const isMain = process.argv[1] === fileURLToPath(import.meta.url);

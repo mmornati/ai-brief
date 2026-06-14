@@ -1,4 +1,11 @@
 # Deferred Work
+## Deferred from: code review of story-2.2 (2026-06-14)
+
+- Stale state cleanup on pipeline re-run — runner doesn't clear `.step-*.completed` / `.step-*.failed` / `NN-*.md` from previous runs; resume logic in story 2.3 should handle this (or add cleanup before resume starts) [`src/pipeline/runner.js`]
+- `parseArgs` doesn't support `--format=value` equals form — minor CLI ergonomics; out of scope for runner story [`src/cli.js:5-18`]
+- Dynamic `import(absPath)` caches modules — orchestrator hot-reload not supported; test uses `?t=` query string to bust cache. Edge case, not breaking [`src/pipeline/runner.js:18`]
+- `inputFile` accepts absolute paths and `..` traversal — `path.resolve(projectRoot, '/etc/passwd')` returns `/etc/passwd`. User-controlled CLI tool, low risk; tighten in a security-focused story if exposed as a library [`src/pipeline/runner.js:31`]
+
 ## Deferred from: code review of story-2.1 (2026-06-14)
 
 - Contract drift with `types.js` — `loadPipelineDefinition` / `loadFormatDefinition` (Story 1.3, sync, returns `{steps}` / `{formats}`) and `loadSteps` / `loadFormats` (async, returns array) both load the same data with different shapes. Reconcile in a future consolidation story. [`src/pipeline/types.js`]
