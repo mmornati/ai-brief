@@ -1,6 +1,10 @@
+---
+baseline_commit: fcb44e5e442e6b6cf566a49cf4031534274e0ab9
+---
+
 # Story 2.1: Load Step Definitions
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -18,19 +22,19 @@ So that the pipeline knows which steps to execute and in what order.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Create step loader (AC: #1, #2, #3)
-  - [ ] Create `src/pipeline/step-loader.js` with `loadSteps()` function
-  - [ ] Implement JSON read + validation of step structure
-  - [ ] Handle missing file, malformed JSON, empty steps
-  - [ ] Return `StepDefinition[]` per the contract from Story 1.3
-- [ ] Task 2: Create format loader (AC: #4, #5)
-  - [ ] Add `loadFormats()` function in same module
-  - [ ] Implement JSON read + validation of format structure
-  - [ ] Handle missing file
-- [ ] Task 3: Create tests (AC: all)
-  - [ ] Create `test/pipeline/step-loader.test.js`
-  - [ ] Test valid/empty/malformed scenarios
-  - [ ] Use fixture JSON files in a `test/fixtures/` directory
+- [x] Task 1: Create step loader (AC: #1, #2, #3)
+  - [x] Create `src/pipeline/step-loader.js` with `loadSteps()` function
+  - [x] Implement JSON read + validation of step structure
+  - [x] Handle missing file, malformed JSON, empty steps
+  - [x] Return `StepDefinition[]` per the contract from Story 1.3
+- [x] Task 2: Create format loader (AC: #4, #5)
+  - [x] Add `loadFormats()` function in same module
+  - [x] Implement JSON read + validation of format structure
+  - [x] Handle missing file
+- [x] Task 3: Create tests (AC: all)
+  - [x] Create `test/pipeline/step-loader.test.js`
+  - [x] Test valid/empty/malformed scenarios
+  - [x] Use fixture JSON files in a `test/fixtures/` directory
 
 ## Dev Notes
 
@@ -58,13 +62,28 @@ So that the pipeline knows which steps to execute and in what order.
 - [Source: architecture.md#Integration-Points]
 - [Source: epics.md#Story-2.1-Load-Step-Definitions]
 
+## Change Log
+
+- Implemented `step-loader.js` with `loadSteps()`, `loadFormats()`, `validateStepDefinitions()`, `validateFormatDefinitions()` — async I/O, additional validation rules, empty-steps handling per AC #3
+- 30 tests covering all ACs and validation edge cases
+- 9 fixture JSON files under `test/fixtures/`
+
 ## Dev Agent Record
 
 ### Agent Model Used
 
+opencode/deepseek-v4-flash-free
+
 ### Debug Log References
 
+- Initial: types.js already had loadPipelineDefinition / loadFormatDefinition — step-loader wraps with async I/O, additional validation (kebab-case, .md, .js), and empty-steps→[] behavior per AC #3
+
 ### Completion Notes List
+
+- Created `src/pipeline/step-loader.js` with `loadSteps()`, `loadFormats()`, `validateStepDefinitions()`, `validateFormatDefinitions()`
+- Additional validations: kebab-case name, .md promptFile, .js orchestrator
+- Empty steps/formats return [] (no crash)
+- 30 tests added, all 131 tests pass
 
 ### File List
 
@@ -73,5 +92,9 @@ So that the pipeline knows which steps to execute and in what order.
 - `test/fixtures/pipeline-valid.json`
 - `test/fixtures/pipeline-empty.json`
 - `test/fixtures/pipeline-malformed.json`
+- `test/fixtures/pipeline-missing-steps.json`
+- `test/fixtures/pipeline-bad-names.json`
+- `test/fixtures/pipeline-bad-ext.json`
 - `test/fixtures/formats-valid.json`
-- `test/fixtures/formats-malformed.json`
+- `test/fixtures/formats-empty.json`
+- `test/fixtures/formats-bad-ext.json`

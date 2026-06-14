@@ -1,0 +1,6 @@
+{
+  "formats": [
+    { "name": "blog", "orchestrator": "src/formats/opencode.js" },
+    { "name": "slides", "orchestrator": "src/formats/claude.js" }
+  ]
+}

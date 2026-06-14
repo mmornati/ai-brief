@@ -1,0 +1,6 @@
+{
+  "steps": [
+    { "name": "validate", "promptFile": "steps/validate.txt", "description": "Wrong extension" },
+    { "name": "research", "promptFile": "steps/research.md", "description": "Research" }
+  ]
+}

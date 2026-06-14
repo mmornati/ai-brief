@@ -1,0 +1,7 @@
+{
+  "steps": [
+    { "name": "NotKebab", "promptFile": "steps/a.md", "description": "Bad case" },
+    { "name": "also_bad", "promptFile": "steps/b.md", "description": "Underscore" },
+    { "name": "UPPERCASE", "promptFile": "steps/c.md", "description": "Upper" }
+  ]
+}

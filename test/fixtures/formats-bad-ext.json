@@ -1,0 +1,5 @@
+{
+  "formats": [
+    { "name": "blog", "orchestrator": "src/formats/opencode.py" }
+  ]
+}
