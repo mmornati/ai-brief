@@ -18,6 +18,29 @@ You are composing full content from the provided outline.
 - Use examples where helpful
 - Maintain consistent tone throughout
 - Reference research sources where applicable
+- Match the target audience's level of expertise
+- Cite sources inline where claims rest on external evidence
+- Aim for the length the outline implies — do not pad, do not truncate
+
+## Output Format
+
+```markdown
+# Draft
+
+## Section 1
+
+Full prose for section 1.
+
+## Section 2
+
+Full prose for section 2.
+
+...
+
+## Sources
+
+- [Source Title](url) — how it was used
+```
 
 ---
 

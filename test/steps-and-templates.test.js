@@ -1,125 +1,156 @@
 import { describe, it, expect } from 'vitest';
-import { existsSync, readFileSync } from 'fs';
+import { existsSync, readFileSync, readdirSync } from 'fs';
 import { resolve } from 'path';
+import { fileURLToPath } from 'url';
 
-const STEPS_DIR = resolve('steps');
-const TEMPLATES_DIR = resolve('src/templates/default');
+const HERE = fileURLToPath(new URL('.', import.meta.url));
+const STEPS_DIR = resolve(HERE, '..', 'steps');
+const TEMPLATES_DIR = resolve(HERE, '..', 'src', 'templates', 'default');
+const PIPELINE_FILE = resolve(HERE, '..', 'pipeline-definition', 'pipeline.json');
 
-const EXPECTED_STEPS = [
-  'validate.md',
-  'research.md',
-  'structure.md',
-  'write.md',
-  'format.md',
-  'review.md',
-];
+const KEBAB_RE = /^[a-z](?:-?[a-z0-9]+)*\.md$/;
 
-const EXPECTED_TEMPLATES = [
-  'brief.md',
-  'story.md',
-  'slide.md',
-];
+function readSafe(path) {
+  try {
+    return readFileSync(path, 'utf-8');
+  } catch (err) {
+    throw new Error(`Cannot read ${path}: ${err.message}`);
+  }
+}
 
-describe('Step prompt files (AC #1)', () => {
-  EXPECTED_STEPS.forEach(file => {
-    it(`${file} exists in steps/`, () => {
+function readPipeline() {
+  if (!existsSync(PIPELINE_FILE)) {
+    throw new Error(`pipeline.json missing at ${PIPELINE_FILE}`);
+  }
+  try {
+    const data = JSON.parse(readFileSync(PIPELINE_FILE, 'utf-8'));
+    if (!Array.isArray(data?.steps)) {
+      throw new Error(`pipeline.json 'steps' is missing or not an array`);
+    }
+    return data;
+  } catch (err) {
+    if (err instanceof SyntaxError) {
+      throw new Error(`pipeline.json contains invalid JSON: ${err.message}`);
+    }
+    throw err;
+  }
+}
+
+function instructionsBlock(content) {
+  const fromIntro = content.match(/^#\s+\S+([\s\S]*?)(?=^##\s+|\Z)/m);
+  return fromIntro ? fromIntro[1] : '';
+}
+
+function listMarkdownFiles(dir) {
+  return readdirSync(dir).filter(f => f.endsWith('.md'));
+}
+
+describe('Step prompt files (AC #1, #3, #4, #5)', () => {
+  const stepFiles = listMarkdownFiles(STEPS_DIR);
+
+  it('steps/ contains six prompt files', () => {
+    expect(stepFiles.length).toBe(6);
+  });
+
+  it('all step files are kebab-case and exist on disk', () => {
+    stepFiles.forEach(file => {
+      expect(file).toMatch(KEBAB_RE);
       expect(existsSync(resolve(STEPS_DIR, file))).toBe(true);
-    });
-
-    it(`${file} is a non-empty markdown file`, () => {
-      const content = readFileSync(resolve(STEPS_DIR, file), 'utf-8');
-      expect(content.length).toBeGreaterThan(0);
-      expect(content.startsWith('#')).toBe(true);
     });
   });
 
-  it('all step files use kebab-case naming', () => {
-    EXPECTED_STEPS.forEach(file => {
-      expect(file).toMatch(/^[a-z][a-z0-9-]*\.md$/);
-      expect(file).not.toMatch(/[A-Z_]/);
+  stepFiles.forEach(file => {
+    it(`${file} is a non-empty markdown file with required sections`, () => {
+      const content = readSafe(resolve(STEPS_DIR, file));
+      expect(content.length).toBeGreaterThan(0);
+      expect(content).toMatch(/^#\s+\w+/m);
+      expect(content).toMatch(/^##\s+Instructions\b/im);
     });
+  });
+
+  it('validate.md instructs to check structure, spelling, and completeness', () => {
+    const content = readSafe(resolve(STEPS_DIR, 'validate.md'));
+    const body = instructionsBlock(content);
+    expect(body).toMatch(/structur/i);
+    expect(body).toMatch(/spelling/i);
+    expect(body).toMatch(/completeness/i);
+  });
+
+  it('review.md instructs an adversarial review pass', () => {
+    const content = readSafe(resolve(STEPS_DIR, 'review.md'));
+    const body = instructionsBlock(content);
+    expect(body).toMatch(/adversarial/i);
+    expect(body).toMatch(/review/i);
   });
 });
 
-describe('Default templates (AC #2)', () => {
-  EXPECTED_TEMPLATES.forEach(file => {
-    it(`${file} exists in src/templates/default/`, () => {
+describe('Default templates (AC #2, #3)', () => {
+  const templateFiles = listMarkdownFiles(TEMPLATES_DIR);
+
+  it('templates/ contains brief, story, and slide', () => {
+    expect(templateFiles.sort()).toEqual(['brief.md', 'slide.md', 'story.md']);
+  });
+
+  it('all template files are kebab-case and exist on disk', () => {
+    templateFiles.forEach(file => {
+      expect(file).toMatch(KEBAB_RE);
       expect(existsSync(resolve(TEMPLATES_DIR, file))).toBe(true);
     });
+  });
 
+  templateFiles.forEach(file => {
     it(`${file} is a non-empty file`, () => {
-      const content = readFileSync(resolve(TEMPLATES_DIR, file), 'utf-8');
+      const content = readSafe(resolve(TEMPLATES_DIR, file));
       expect(content.length).toBeGreaterThan(0);
     });
   });
 
   it('brief.md has frontmatter with title, date, tags', () => {
-    const content = readFileSync(resolve(TEMPLATES_DIR, 'brief.md'), 'utf-8');
-    expect(content).toContain('title:');
-    expect(content).toContain('date:');
-    expect(content).toContain('tags:');
-    expect(content).toContain('---');
+    const content = readSafe(resolve(TEMPLATES_DIR, 'brief.md'));
+    expect(content).toMatch(/^---\n[\s\S]*?\n---/);
+    expect(content).toMatch(/^title:/m);
+    expect(content).toMatch(/^date:/m);
+    expect(content).toMatch(/^tags:/m);
   });
 
-  it('brief.md has intro, body, conclusion sections', () => {
-    const content = readFileSync(resolve(TEMPLATES_DIR, 'brief.md'), 'utf-8');
-    expect(content).toContain('Introduction');
-    expect(content).toContain('Body');
-    expect(content).toContain('Conclusion');
+  it('brief.md has Introduction, Body, Conclusion sections', () => {
+    const content = readSafe(resolve(TEMPLATES_DIR, 'brief.md'));
+    expect(content).toMatch(/^##\s+Introduction\b/m);
+    expect(content).toMatch(/^##\s+Body\b/m);
+    expect(content).toMatch(/^##\s+Conclusion\b/m);
   });
 
-  it('slide.md uses --- slide separators and speaker notes', () => {
-    const content = readFileSync(resolve(TEMPLATES_DIR, 'slide.md'), 'utf-8');
-    const slideCount = (content.match(/^---$/gm) || []).length;
-    expect(slideCount).toBeGreaterThanOrEqual(3);
-    expect(content).toContain('speaker:');
-    expect(content).toContain('marp: true');
+  it('slide.md uses Marp frontmatter, slide separators, speaker notes, and class directives', () => {
+    const content = readSafe(resolve(TEMPLATES_DIR, 'slide.md'));
+    expect(content).toMatch(/^marp:\s*true/m);
+    expect(content).toMatch(/<!--\s*speaker:/);
+    expect(content).toMatch(/<!--\s*_class:/);
+
+    const fmMatch = content.match(/^---\n([\s\S]*?)\n---/m);
+    const frontmatter = fmMatch ? fmMatch[0] : '';
+    const fmDashes = (frontmatter.match(/^---$/gm) || []).length;
+    const allDashes = (content.match(/^---$/gm) || []).length;
+    const slideSeparators = allDashes - fmDashes;
+    expect(slideSeparators).toBeGreaterThanOrEqual(2);
   });
 
   it('story.md has standard story template structure', () => {
-    const content = readFileSync(resolve(TEMPLATES_DIR, 'story.md'), 'utf-8');
-    expect(content).toContain('## Story');
-    expect(content).toContain('## Acceptance Criteria');
-    expect(content).toContain('## Tasks / Subtasks');
-    expect(content).toContain('## Dev Notes');
-    expect(content).toContain('## Dev Agent Record');
+    const content = readSafe(resolve(TEMPLATES_DIR, 'story.md'));
+    expect(content).toMatch(/^##\s+Story\b/m);
+    expect(content).toMatch(/^##\s+Acceptance Criteria\b/m);
+    expect(content).toMatch(/^##\s+Tasks\s*\/?\s*Subtasks\b/m);
+    expect(content).toMatch(/^##\s+Dev Notes\b/m);
+    expect(content).toMatch(/^##\s+Dev Agent Record\b/m);
   });
 });
 
-describe('Step prompt content (AC #4, #5)', () => {
-  it('validate.md instructs to validate input', () => {
-    const content = readFileSync(resolve(STEPS_DIR, 'validate.md'), 'utf-8');
-    expect(content).toMatch(/validat/i);
-    expect(content).toMatch(/structur/i);
-    expect(content).toMatch(/spelling/i);
-    expect(content).toMatch(/completeness/i);
-  });
-
-  it('review.md instructs adversarial review pass', () => {
-    const content = readFileSync(resolve(STEPS_DIR, 'review.md'), 'utf-8');
-    expect(content).toMatch(/adversarial/i);
-    expect(content).toMatch(/review/i);
-  });
-});
-
-describe('Naming conventions (AC #3)', () => {
-  it('step files follow kebab-case', () => {
-    EXPECTED_STEPS.forEach(file => {
-      expect(file).toMatch(/^[a-z][a-z0-9-]*\.md$/);
-    });
-  });
-
-  it('template files follow kebab-case', () => {
-    EXPECTED_TEMPLATES.forEach(file => {
-      expect(file).toMatch(/^[a-z][a-z0-9-]*\.md$/);
-    });
-  });
-
-  it('step names in pipeline.json match step file names', () => {
-    const pipeline = JSON.parse(
-      readFileSync(resolve('pipeline-definition/pipeline.json'), 'utf-8')
-    );
+describe('Pipeline registry ↔ step files', () => {
+  it('every pipeline step has a string kebab-case name and a corresponding file', () => {
+    const pipeline = readPipeline();
     pipeline.steps.forEach(step => {
+      expect(typeof step.name).toBe('string');
+      expect(step.name.length).toBeGreaterThan(0);
+      expect(step.name).toMatch(/^[a-z](?:-?[a-z0-9]+)*$/);
       const expectedFile = `${step.name}.md`;
       expect(existsSync(resolve(STEPS_DIR, expectedFile))).toBe(true);
     });
