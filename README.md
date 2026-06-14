@@ -18,6 +18,12 @@ in the target project, registers the `ai-brief-*` skills, and copies templates
 and step prompts to `ai-brief/templates/` and `ai-brief/steps/`. Reinstalls
 back up modified files to `.bak` before overwriting.
 
+> **Note:** Generated skill files under `.opencode/agents/skills/ai-brief-*/`
+> and `.claude/skills/ai-brief-*/` are fully derived from
+> `pipeline-definition/pipeline.json` and `pipeline-definition/formats.json`,
+> and are **overwritten on every `./install.sh` run**. Do not edit them by
+> hand — change the pipeline definition instead.
+
 ## Usage
 
 ```bash

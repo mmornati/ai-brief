@@ -1,4 +1,11 @@
 # Deferred Work
+## Deferred from: code review of story-2.4 (2026-06-14)
+
+- `orchestrate` default export is a no-op stub — pre-existing; `runner.js` calls `loadFormatOrchestrator` which needs the contract placeholder until a future story implements real per-format orchestration. Out of scope for skill-registration story. [`src/formats/opencode.js:57-59`, `src/formats/claude.js:61-63`]
+- Hardcoded `node src/cli.js run <input> --format <format>` in generated SKILL.md — assumes project-root CWD and `node` runtime; tighten in a future install-docs / packaging story. [`src/formats/opencode.js:15`, `src/formats/claude.js:17`]
+- No backup for generated skill writes — pre-existing; spec dev note (story 2.4 line 53) explicitly states "User modifications to skill files will be overwritten". The skill content is fully derived from `pipeline-definition/` so the overwrite is by design. No `SKILL.md.bak` is needed. [`src/install.js:243-264`]
+- No warning when an IDE has no master-skill generator — low priority; if a future IDE is added without `generateMasterSkill`, the master skill is silently skipped. Document and warn in a future cross-IDE story. [`src/install.js:244-265`]
+
 ## Deferred from: code review of story-2.2 (2026-06-14)
 
 - Stale state cleanup on pipeline re-run — runner doesn't clear `.step-*.completed` / `.step-*.failed` / `NN-*.md` from previous runs; resume logic in story 2.3 should handle this (or add cleanup before resume starts) [`src/pipeline/runner.js`]

@@ -328,3 +328,230 @@ describe('install', () => {
     expect(await exists(userDest)).toBe(false);
   });
 });
+
+describe('install pipeline-driven skill generation', () => {
+  let tmpDir;
+  let projectDir;
+  let logSpy;
+
+  async function writePipelineSource(sourceRoot) {
+    await mkdir(path.join(sourceRoot, 'pipeline-definition'));
+    fs.writeFileSync(
+      path.join(sourceRoot, 'pipeline-definition', 'pipeline.json'),
+      JSON.stringify({
+        steps: [
+          { name: 'validate', promptFile: 'steps/validate.md', description: 'Validate input markdown' },
+          { name: 'write', promptFile: 'steps/write.md', description: 'Write full content' },
+        ],
+      })
+    );
+    fs.writeFileSync(
+      path.join(sourceRoot, 'pipeline-definition', 'formats.json'),
+      JSON.stringify({
+        formats: [
+          { name: 'blog', orchestrator: 'src/formats/opencode.js' },
+          { name: 'slides', orchestrator: 'src/formats/claude.js' },
+        ],
+      })
+    );
+  }
+
+  beforeEach(async () => {
+    tmpDir = await createTempDir();
+    projectDir = await createTempDir();
+    logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+  });
+
+  afterEach(async () => {
+    for (const dir of [tmpDir, projectDir]) {
+      if (dir && (await exists(dir))) {
+        await fs.promises.rm(dir, { recursive: true, force: true });
+      }
+    }
+    vi.restoreAllMocks();
+  });
+
+  it('writes one SKILL.md per format for the opencode IDE without double ai-brief- prefix', async () => {
+    const sourceRoot = tmpDir;
+    await writePipelineSource(sourceRoot);
+    await mkdir(path.join(projectDir, '.opencode'));
+
+    const { install } = await import('../src/install.js');
+    await install(projectDir, { ides: ['opencode'], sourceRoot });
+
+    const blog = path.join(projectDir, '.opencode', 'agents', 'skills', 'ai-brief-blog', 'SKILL.md');
+    const slides = path.join(projectDir, '.opencode', 'agents', 'skills', 'ai-brief-slides', 'SKILL.md');
+    const master = path.join(projectDir, '.opencode', 'agents', 'skills', 'ai-brief-run', 'SKILL.md');
+
+    expect(await exists(blog)).toBe(true);
+    expect(await exists(slides)).toBe(true);
+    expect(await exists(master)).toBe(true);
+
+    expect(fs.readFileSync(blog, 'utf-8')).toContain('# ai-brief-blog');
+    expect(fs.readFileSync(slides, 'utf-8')).toContain('# ai-brief-slides');
+    expect(fs.readFileSync(master, 'utf-8')).toContain('# ai-brief-run');
+
+    expect(await exists(path.join(projectDir, '.opencode', 'agents', 'skills', 'ai-brief-ai-brief-blog', 'SKILL.md'))).toBe(false);
+  });
+
+  it('writes Claude Code skills with the claude generator (YAML frontmatter, not the first format generator)', async () => {
+    const sourceRoot = tmpDir;
+    await writePipelineSource(sourceRoot);
+    await mkdir(path.join(projectDir, '.claude'));
+
+    const { install } = await import('../src/install.js');
+    await install(projectDir, { ides: ['claude'], sourceRoot });
+
+    const slides = path.join(projectDir, '.claude', 'skills', 'ai-brief-slides', 'SKILL.md');
+    const master = path.join(projectDir, '.claude', 'skills', 'ai-brief-run', 'SKILL.md');
+
+    expect(await exists(slides)).toBe(true);
+    expect(await exists(master)).toBe(true);
+
+    const slidesContent = fs.readFileSync(slides, 'utf-8');
+    const masterContent = fs.readFileSync(master, 'utf-8');
+    expect(slidesContent).toMatch(/^---\nname: ai-brief-slides\n/);
+    expect(masterContent).toMatch(/^---\nname: ai-brief-run\n/);
+  });
+
+  it('does not write skill files under --dry-run', async () => {
+    const sourceRoot = tmpDir;
+    await writePipelineSource(sourceRoot);
+    await mkdir(path.join(projectDir, '.opencode'));
+
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      const { install } = await import('../src/install.js');
+      await install(projectDir, { ides: ['opencode'], dryRun: true, sourceRoot });
+
+      const master = path.join(projectDir, '.opencode', 'agents', 'skills', 'ai-brief-run', 'SKILL.md');
+      const blog = path.join(projectDir, '.opencode', 'agents', 'skills', 'ai-brief-blog', 'SKILL.md');
+      expect(await exists(master)).toBe(false);
+      expect(await exists(blog)).toBe(false);
+
+      const logCalls = logSpy.mock.calls.map(args => String(args[0])).join('\n');
+      expect(logCalls).toMatch(/\[dry-run\][^\n]*generate master skill[^\n]*run[^\n]*opencode/);
+      expect(logCalls).toMatch(/\[dry-run\][^\n]*generate skill[^\n]*blog[^\n]*opencode/);
+      expect(logCalls).toMatch(/\[dry-run\][^\n]*generate skill[^\n]*slides[^\n]*opencode/);
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
+
+  it('warns and skips when pipeline-definition is missing', async () => {
+    const sourceRoot = tmpDir;
+    await mkdir(path.join(projectDir, '.opencode'));
+
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      const { install } = await import('../src/install.js');
+      await expect(install(projectDir, { ides: ['opencode'], sourceRoot })).resolves.not.toThrow();
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringMatching(/pipeline-definition not found/));
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
+
+  it('warns and skips when pipeline.json has no steps array', async () => {
+    const sourceRoot = tmpDir;
+    await mkdir(path.join(sourceRoot, 'pipeline-definition'));
+    fs.writeFileSync(
+      path.join(sourceRoot, 'pipeline-definition', 'pipeline.json'),
+      JSON.stringify({ wrong: 'shape' })
+    );
+    fs.writeFileSync(
+      path.join(sourceRoot, 'pipeline-definition', 'formats.json'),
+      JSON.stringify({ formats: [] })
+    );
+    await mkdir(path.join(projectDir, '.opencode'));
+
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      const { install } = await import('../src/install.js');
+      await expect(install(projectDir, { ides: ['opencode'], sourceRoot })).resolves.not.toThrow();
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringMatching(/steps.*array/));
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
+
+  it('warns and skips when formats.json has no formats array', async () => {
+    const sourceRoot = tmpDir;
+    await mkdir(path.join(sourceRoot, 'pipeline-definition'));
+    fs.writeFileSync(
+      path.join(sourceRoot, 'pipeline-definition', 'pipeline.json'),
+      JSON.stringify({ steps: [] })
+    );
+    fs.writeFileSync(
+      path.join(sourceRoot, 'pipeline-definition', 'formats.json'),
+      JSON.stringify({ wrong: 'shape' })
+    );
+    await mkdir(path.join(projectDir, '.opencode'));
+
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      const { install } = await import('../src/install.js');
+      await expect(install(projectDir, { ides: ['opencode'], sourceRoot })).resolves.not.toThrow();
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringMatching(/formats.*array/));
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
+
+  it('skips malformed format entries but writes the valid ones', async () => {
+    const sourceRoot = tmpDir;
+    await mkdir(path.join(sourceRoot, 'pipeline-definition'));
+    fs.writeFileSync(
+      path.join(sourceRoot, 'pipeline-definition', 'pipeline.json'),
+      JSON.stringify({ steps: [{ name: 's1', promptFile: 's.md', description: 'd' }] })
+    );
+    fs.writeFileSync(
+      path.join(sourceRoot, 'pipeline-definition', 'formats.json'),
+      JSON.stringify({
+        formats: [
+          null,
+          { name: 'good' },
+          { name: 'no-orch', orchestrator: '' },
+          { name: 'bad-orch', orchestrator: '../etc/passwd' },
+          { name: 'blog', orchestrator: 'src/formats/opencode.js' },
+        ],
+      })
+    );
+    await mkdir(path.join(projectDir, '.opencode'));
+
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      const { install } = await import('../src/install.js');
+      await install(projectDir, { ides: ['opencode'], sourceRoot });
+
+      const blog = path.join(projectDir, '.opencode', 'agents', 'skills', 'ai-brief-blog', 'SKILL.md');
+      const master = path.join(projectDir, '.opencode', 'agents', 'skills', 'ai-brief-run', 'SKILL.md');
+      expect(await exists(blog)).toBe(true);
+      expect(await exists(master)).toBe(true);
+
+      const flatWarns = warnSpy.mock.calls.map(args => String(args[0])).join('\n');
+      expect(flatWarns).toMatch(/format\[0\][^\n]*not an object/);
+      expect(flatWarns).toMatch(/format\[1\][^\n]*orchestrator/);
+      expect(flatWarns).toMatch(/format\[2\][^\n]*orchestrator/);
+      expect(flatWarns).toMatch(/format\[3\][^\n]*safe relative path/);
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
+
+  it('writes pipeline skills for both IDEs in a single install', async () => {
+    const sourceRoot = tmpDir;
+    await writePipelineSource(sourceRoot);
+    await mkdir(path.join(projectDir, '.opencode'));
+    await mkdir(path.join(projectDir, '.claude'));
+
+    const { install } = await import('../src/install.js');
+    await install(projectDir, { ides: ['opencode', 'claude'], sourceRoot });
+
+    expect(await exists(path.join(projectDir, '.opencode', 'agents', 'skills', 'ai-brief-run', 'SKILL.md'))).toBe(true);
+    expect(await exists(path.join(projectDir, '.opencode', 'agents', 'skills', 'ai-brief-blog', 'SKILL.md'))).toBe(true);
+    expect(await exists(path.join(projectDir, '.claude', 'skills', 'ai-brief-run', 'SKILL.md'))).toBe(true);
+    expect(await exists(path.join(projectDir, '.claude', 'skills', 'ai-brief-slides', 'SKILL.md'))).toBe(true);
+  });
+});

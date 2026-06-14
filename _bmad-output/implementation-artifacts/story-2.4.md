@@ -4,7 +4,7 @@ baseline_commit: 7fe2f0ad0bfe028c452c9a78c23efc6ec0f3f44d
 
 # Story 2.4: IDE Skill Registration
 
-Status: review
+Status: done
 
 ## Story
 
@@ -35,6 +35,28 @@ So that I can run `ai-brief blog docs/idea.md` directly from my editor.
   - [x] Create `test/formats/opencode.test.js`
   - [x] Create `test/formats/claude.test.js`
   - [x] Verify output structure against IDE documentation
+
+### Review Findings
+
+- [x] [Review][Patch] Double `ai-brief-` prefix in generated skill paths [src/install.js:53-56, src/formats/opencode.js:24,54, src/formats/claude.js:26,58]
+- [x] [Review][Patch] Master skill uses the first format's generator instead of the IDE's own generator [src/install.js:244-256]
+- [x] [Review][Patch] Path traversal & markdown injection via unvalidated `formatName` [src/formats/opencode.js:1, src/formats/claude.js:1]
+- [x] [Review][Patch] Bare `catch {}` swallows file/JSON/import errors silently [src/install.js:209-211, 217-219, 240-242]
+- [x] [Review][Patch] `formats` may be null or `formats.formats` non-array [src/install.js:225]
+- [x] [Review][Patch] `formatDef.orchestrator` may be undefined/non-string [src/install.js:229-230]
+- [x] [Review][Patch] `gen.generateSkill` may return null/non-object [src/install.js:243-244]
+- [x] [Review][Patch] `masterGen.generateMasterSkill` may return null/non-object [src/install.js:255-256]
+- [x] [Review][Patch] Only one of pipeline.json/formats.json readable — silently discards the other [src/install.js:208-214]
+- [x] [Review][Patch] Unknown IDE values silently default to opencode path [src/install.js:53-56]
+- [x] [Review][Patch] Step entries may be null or missing name/description [src/formats/opencode.js:5, src/formats/claude.js:5]
+- [x] [Review][Patch] `formats` arg may be null/array of bad shape in masterSkill [src/formats/opencode.js:29-31, src/formats/claude.js:31-33]
+- [x] [Review][Patch] No integration tests for `generateSkillsFromPipeline` (double-prefix bug etc. would not be caught) [test/install.test.js]
+- [x] [Review][Patch] Claude Code skill missing YAML frontmatter (dev note: "typically a YAML or JSON definition file plus a SKILL.md") [src/formats/claude.js]
+- [x] [Review][Patch] README does not document skill-file regeneration/overwrite behavior [README.md]
+- [x] [Review][Defer] `orchestrate` default export is a no-op stub — deferred, pre-existing (runner contract; not story 2.4 scope)
+- [x] [Review][Defer] Hardcoded `node src/cli.js run` in generated docs — deferred, pre-existing (install-docs story)
+- [x] [Review][Defer] No backup for generated skill writes — deferred, pre-existing (spec explicitly states overwrite-on-install)
+- [x] [Review][Defer] No warning when IDE has no master skill generator — deferred, pre-existing (low priority)
 
 ## Dev Notes
 

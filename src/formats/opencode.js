@@ -1,8 +1,36 @@
-export function generateSkill(pipelineDef, formatDef) {
-  const formatName = formatDef.name;
-  const steps = pipelineDef.steps || [];
+const FORMAT_NAME_RE = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;
 
-  const stepLines = steps.map((s, i) => `${i + 1}. **${s.name}** — ${s.description}`);
+function assertValidFormatName(name) {
+  if (typeof name !== 'string' || name.length === 0 || !FORMAT_NAME_RE.test(name)) {
+    throw new Error(
+      `Invalid format name: expected kebab-case identifier, got ${JSON.stringify(name)}`
+    );
+  }
+}
+
+function stepLine(step, index) {
+  if (!step || typeof step.name !== 'string' || typeof step.description !== 'string') {
+    return null;
+  }
+  return `${index + 1}. **${step.name}** — ${step.description}`;
+}
+
+function readSteps(pipelineDef) {
+  if (!pipelineDef || !Array.isArray(pipelineDef.steps)) return [];
+  return pipelineDef.steps.map(stepLine).filter(Boolean);
+}
+
+function readFormatNames(formats) {
+  if (!Array.isArray(formats)) return [];
+  return formats
+    .filter(f => f && typeof f.name === 'string' && FORMAT_NAME_RE.test(f.name))
+    .map(f => `- \`${f.name}\``);
+}
+
+export function generateSkill(pipelineDef, formatDef) {
+  assertValidFormatName(formatDef && formatDef.name);
+  const formatName = formatDef.name;
+  const stepLines = readSteps(pipelineDef);
 
   const skillContent = [
     `# ai-brief-${formatName}`,
@@ -21,14 +49,12 @@ export function generateSkill(pipelineDef, formatDef) {
     '',
   ].join('\n');
 
-  return { skillDir: `ai-brief-${formatName}`, skillContent };
+  return { skillDir: formatName, skillContent };
 }
 
 export function generateMasterSkill(pipelineDef, formats) {
-  const steps = pipelineDef.steps || [];
-
-  const stepLines = steps.map((s, i) => `${i + 1}. **${s.name}** — ${s.description}`);
-  const formatLines = formats.map(f => `- \`${f.name}\``);
+  const stepLines = readSteps(pipelineDef);
+  const formatLines = readFormatNames(formats);
 
   const skillContent = [
     '# ai-brief-run',
@@ -51,7 +77,7 @@ export function generateMasterSkill(pipelineDef, formats) {
     '',
   ].join('\n');
 
-  return { skillDir: 'ai-brief-run', skillContent };
+  return { skillDir: 'run', skillContent };
 }
 
 export default async function orchestrate(accumulatedContent) {

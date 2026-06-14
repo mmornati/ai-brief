@@ -38,6 +38,7 @@ const OPENCODE_SKILL_DIR = '.opencode/agents/skills';
 const CLAUDE_SKILL_DIR = '.claude/skills';
 const TARGET_TEMPLATES_DIR = 'ai-brief/templates';
 const TARGET_STEPS_DIR = 'ai-brief/steps';
+const SUPPORTED_IDES = new Set(['opencode', 'claude']);
 
 async function detectIDEs(targetDir) {
   const ides = [];
@@ -51,6 +52,9 @@ async function detectIDEs(targetDir) {
 }
 
 function resolveSkillDest(targetDir, ide, skillName) {
+  if (!SUPPORTED_IDES.has(ide)) {
+    throw new InstallError(`Unsupported IDE for skill generation: ${JSON.stringify(ide)}`);
+  }
   const base = ide === 'claude' ? CLAUDE_SKILL_DIR : OPENCODE_SKILL_DIR;
   return path.join(targetDir, base, `ai-brief-${skillName}`, 'SKILL.md');
 }
@@ -200,7 +204,16 @@ async function deployStepPrompts(targetDir, dryRun, sourceRoot) {
   }
 }
 
-async function generateSkillsFromPipeline(targetDir, ides, dryRun, sourceRoot) {
+async function loadIdeGenerator(_sourceRoot, ide) {
+  const generatorPath = path.resolve(PROJECT_ROOT, 'src', 'formats', `${ide}.js`);
+  return import(generatorPath);
+}
+
+function isSafeString(value) {
+  return typeof value === 'string' && value.length > 0;
+}
+
+async function loadPipelineDefinition(sourceRoot) {
   const pipelinePath = path.resolve(sourceRoot, 'pipeline-definition', 'pipeline.json');
   const formatsPath = path.resolve(sourceRoot, 'pipeline-definition', 'formats.json');
 
@@ -208,59 +221,128 @@ async function generateSkillsFromPipeline(targetDir, ides, dryRun, sourceRoot) {
   try {
     pipelineRaw = await readFile(pipelinePath);
     formatsRaw = await readFile(formatsPath);
-  } catch {
-    console.warn('  [warn] pipeline-definition not found, skipping skill generation');
-    return;
+  } catch (err) {
+    console.warn(`  [warn] pipeline-definition not found (${err.code || err.message}), skipping skill generation`);
+    return null;
+  }
+
+  if (!isSafeString(pipelineRaw) || !isSafeString(formatsRaw)) {
+    console.warn('  [warn] pipeline-definition is empty, skipping skill generation');
+    return null;
   }
 
   let pipelineDef, formats;
   try {
     pipelineDef = JSON.parse(pipelineRaw);
     formats = JSON.parse(formatsRaw);
-  } catch {
-    console.warn('  [warn] failed to parse pipeline-definition, skipping skill generation');
-    return;
+  } catch (err) {
+    console.warn(`  [warn] failed to parse pipeline-definition (${err.message}), skipping skill generation`);
+    return null;
   }
 
-  const formatDefs = formats.formats || [];
+  if (!pipelineDef || typeof pipelineDef !== 'object' || !Array.isArray(pipelineDef.steps)) {
+    console.warn('  [warn] pipeline.json must have a "steps" array, skipping skill generation');
+    return null;
+  }
+
+  if (!formats || typeof formats !== 'object' || !Array.isArray(formats.formats)) {
+    console.warn('  [warn] formats.json must have a "formats" array, skipping skill generation');
+    return null;
+  }
+
+  return { pipelineDef, formatDefs: formats.formats };
+}
+
+function validateFormatDef(formatDef, index) {
+  if (!formatDef || typeof formatDef !== 'object') {
+    console.warn(`  [warn] format[${index}] is not an object, skipping`);
+    return false;
+  }
+  if (!isSafeString(formatDef.name)) {
+    console.warn(`  [warn] format[${index}].name must be a non-empty string, skipping`);
+    return false;
+  }
+  if (!isSafeString(formatDef.orchestrator)) {
+    console.warn(`  [warn] format[${index}].orchestrator must be a non-empty string, skipping`);
+    return false;
+  }
+  if (formatDef.orchestrator.includes('..') || path.isAbsolute(formatDef.orchestrator)) {
+    console.warn(`  [warn] format[${index}].orchestrator must be a safe relative path, skipping`);
+    return false;
+  }
+  return true;
+}
+
+async function generateSkillsFromPipeline(targetDir, ides, dryRun, sourceRoot) {
+  const loaded = await loadPipelineDefinition(sourceRoot);
+  if (!loaded) return;
+  const { pipelineDef, formatDefs } = loaded;
+
+  for (let i = 0; i < formatDefs.length; i++) {
+    if (!validateFormatDef(formatDefs[i], i)) {
+      formatDefs[i] = null;
+    }
+  }
+  const validFormatDefs = formatDefs.filter(Boolean);
 
   for (const ide of ides) {
-    let masterGen = null;
-    for (const formatDef of formatDefs) {
-      const generatorPath = path.resolve(sourceRoot, formatDef.orchestrator);
-      let gen;
+    if (!SUPPORTED_IDES.has(ide)) {
+      console.warn(`  [warn] skipping unsupported IDE: ${JSON.stringify(ide)}`);
+      continue;
+    }
+
+    let ideGen;
+    try {
+      ideGen = await loadIdeGenerator(sourceRoot, ide);
+    } catch (err) {
+      console.warn(`  [warn] could not load IDE generator for ${ide} (${err.message}), skipping`);
+      continue;
+    }
+
+    for (const formatDef of validFormatDefs) {
+      if (typeof ideGen.generateSkill !== 'function') continue;
+      let skillDir, skillContent;
       try {
-        gen = await import(generatorPath);
-      } catch {
-        console.warn(`  [warn] could not load generator ${formatDef.orchestrator}, skipping`);
+        ({ skillDir, skillContent } = ideGen.generateSkill(pipelineDef, formatDef));
+      } catch (err) {
+        console.warn(`  [warn] generateSkill for ${formatDef.name} failed (${err.message}), skipping`);
         continue;
       }
-
-      if (!masterGen && typeof gen.generateMasterSkill === 'function') {
-        masterGen = gen;
+      if (!isSafeString(skillDir) || typeof skillContent !== 'string') {
+        console.warn(`  [warn] generateSkill for ${formatDef.name} returned invalid shape, skipping`);
+        continue;
       }
-
-      if (typeof gen.generateSkill === 'function') {
-        const { skillDir, skillContent } = gen.generateSkill(pipelineDef, formatDef);
-        const dest = resolveSkillDest(targetDir, ide, skillDir);
-        if (dryRun) {
-          console.log(`[dry-run] generate skill ${skillDir} for ${ide} → ${dest}`);
-        } else {
-          await writeFile(dest, skillContent);
-          console.log(`  generated skill ${skillDir} for ${ide} → ${dest}`);
-        }
+      const dest = resolveSkillDest(targetDir, ide, skillDir);
+      if (dryRun) {
+        console.log(`[dry-run] generate skill ${skillDir} for ${ide} → ${dest}`);
+      } else {
+        await writeFile(dest, skillContent);
+        console.log(`  generated skill ${skillDir} for ${ide} → ${dest}`);
       }
     }
 
-    if (masterGen) {
-      const { skillDir, skillContent } = masterGen.generateMasterSkill(pipelineDef, formatDefs);
-      const dest = resolveSkillDest(targetDir, ide, skillDir);
-      if (dryRun) {
-        console.log(`[dry-run] generate master skill ${skillDir} for ${ide} → ${dest}`);
-      } else {
-        await writeFile(dest, skillContent);
-        console.log(`  generated master skill ${skillDir} for ${ide} → ${dest}`);
-      }
+    if (typeof ideGen.generateMasterSkill !== 'function') {
+      console.warn(`  [warn] IDE generator for ${ide} has no generateMasterSkill, skipping master skill`);
+      continue;
+    }
+
+    let masterDir, masterContent;
+    try {
+      ({ skillDir: masterDir, skillContent: masterContent } = ideGen.generateMasterSkill(pipelineDef, validFormatDefs));
+    } catch (err) {
+      console.warn(`  [warn] generateMasterSkill for ${ide} failed (${err.message}), skipping`);
+      continue;
+    }
+    if (!isSafeString(masterDir) || typeof masterContent !== 'string') {
+      console.warn(`  [warn] generateMasterSkill for ${ide} returned invalid shape, skipping`);
+      continue;
+    }
+    const dest = resolveSkillDest(targetDir, ide, masterDir);
+    if (dryRun) {
+      console.log(`[dry-run] generate master skill ${masterDir} for ${ide} → ${dest}`);
+    } else {
+      await writeFile(dest, masterContent);
+      console.log(`  generated master skill ${masterDir} for ${ide} → ${dest}`);
     }
   }
 }
