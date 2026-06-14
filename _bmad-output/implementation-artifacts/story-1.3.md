@@ -1,6 +1,10 @@
+---
+baseline_commit: 48d234d67a33c2a343c31021146d8794a7735f9b
+---
+
 # Story 1.3: Orchestration Design & Step Contract
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -18,15 +22,15 @@ So that all subsequent implementation work has a stable foundation.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Define types and contracts (AC: #1)
-  - [ ] Create `src/pipeline/types.js` with JSDoc typedefs
-  - [ ] Export `StepIO`, `PipelineState`, `StepDefinition`, `FormatDefinition` types
-- [ ] Task 2: Create pipeline definition files (AC: #3, #4)
-  - [ ] Create `pipeline-definition/pipeline.json` with 6-step sequence
-  - [ ] Create `pipeline-definition/formats.json` with blog → opencode and slides → claude mappings
-- [ ] Task 3: Contract validation tests (AC: #2, #5)
-  - [ ] Create `test/pipeline/types.test.js` validating contract shapes
-  - [ ] Test malformed JSON handling
+- [x] Task 1: Define types and contracts (AC: #1)
+  - [x] Create `src/pipeline/types.js` with JSDoc typedefs
+  - [x] Export `StepIO`, `PipelineState`, `StepDefinition`, `FormatDefinition` types
+- [x] Task 2: Create pipeline definition files (AC: #3, #4)
+  - [x] Create `pipeline-definition/pipeline.json` with 6-step sequence
+  - [x] Create `pipeline-definition/formats.json` with blog → opencode and slides → claude mappings
+- [x] Task 3: Contract validation tests (AC: #2, #5)
+  - [x] Create `test/pipeline/types.test.js` validating contract shapes
+  - [x] Test malformed JSON handling
 
 ## Dev Notes
 
@@ -73,9 +77,18 @@ So that all subsequent implementation work has a stable foundation.
 
 ### Agent Model Used
 
+deepseek-v4-flash-free
+
 ### Debug Log References
 
+- All 20 new tests passing; full suite 40/40 passing with no regressions
+
 ### Completion Notes List
+
+1. Created `src/pipeline/types.js` with JSDoc typedefs (StepIO, PipelineState, StepDefinition, FormatDefinition) and loader/validation functions (validateDefinition, loadPipelineDefinition, loadFormatDefinition)
+2. Created `pipeline-definition/pipeline.json` with 6-step sequence matching architecture.md: validate → research → structure → write → format → review
+3. Created `pipeline-definition/formats.json` mapping blog → src/formats/opencode.js and slides → src/formats/claude.js
+4. Created `test/pipeline/types.test.js` with 20 tests covering contract shape validation, real file loading, malformed JSON, missing fields, and error cause propagation
 
 ### File List
 
@@ -83,3 +96,7 @@ So that all subsequent implementation work has a stable foundation.
 - `pipeline-definition/pipeline.json`
 - `pipeline-definition/formats.json`
 - `test/pipeline/types.test.js`
+
+## Change Log
+
+- Implemented story 1.3: created types.js with JSDoc typedefs, pipeline.json with 6-step sequence, formats.json with format mappings, and types.test.js with 20 validation tests (2026-06-14)
