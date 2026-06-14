@@ -61,6 +61,26 @@ describe('loadSteps', () => {
     const p = fixture('pipeline-malformed.json');
     await expect(loadSteps(p)).rejects.toThrow(p);
   });
+
+  it('throws on non-string path argument', async () => {
+    await expect(loadSteps(123)).rejects.toThrow(/path must be a non-empty string/);
+    await expect(loadSteps(null)).rejects.toThrow(/path must be a non-empty string/);
+    await expect(loadSteps(undefined)).rejects.toThrow(/path must be a non-empty string/);
+  });
+
+  it('throws on empty / whitespace path', async () => {
+    await expect(loadSteps('')).rejects.toThrow(/path must be a non-empty string/);
+    await expect(loadSteps('   ')).rejects.toThrow(/path must be a non-empty string/);
+  });
+
+  it('preserves the underlying error as `cause`', async () => {
+    try {
+      await loadSteps(fixture('pipeline-malformed.json'));
+      throw new Error('expected loadSteps to throw');
+    } catch (err) {
+      expect(err.cause).toBeInstanceOf(Error);
+    }
+  });
 });
 
 describe('loadFormats', () => {
@@ -111,28 +131,28 @@ describe('validateStepDefinitions', () => {
     expect(() => validateStepDefinitions(
       [{ promptFile: 'x.md', description: 'x' }],
       '/p.json',
-    )).toThrow(/missing or invalid required field/);
+    )).toThrow(/step\[0\]\.name missing or invalid required string field/);
   });
 
   it('throws when step missing promptFile', () => {
     expect(() => validateStepDefinitions(
       [{ name: 'x', description: 'x' }],
       '/p.json',
-    )).toThrow(/missing or invalid required field/);
+    )).toThrow(/step\[0\]\.promptFile missing or invalid required string field/);
   });
 
   it('throws when step missing description', () => {
     expect(() => validateStepDefinitions(
       [{ name: 'x', promptFile: 'x.md' }],
       '/p.json',
-    )).toThrow(/missing or invalid required field/);
+    )).toThrow(/step\[0\]\.description missing or invalid required string field/);
   });
 
   it('throws when name is empty string', () => {
     expect(() => validateStepDefinitions(
       [{ name: '', promptFile: 'x.md', description: 'x' }],
       '/p.json',
-    )).toThrow(/missing or invalid required field/);
+    )).toThrow(/step\[0\]\.name missing or invalid required string field/);
   });
 
   it('throws on duplicate step name', () => {
@@ -168,6 +188,14 @@ describe('validateStepDefinitions', () => {
     expect(() => validateStepDefinitions(steps, '/p.json', ['validate', 'research']))
       .toThrow(/step ordering mismatch at index 1/);
   });
+
+  it('throws on expectedSequence length mismatch', () => {
+    const steps = [
+      { name: 'validate', promptFile: 'v.md', description: 'V' },
+    ];
+    expect(() => validateStepDefinitions(steps, '/p.json', ['validate', 'research']))
+      .toThrow(/expected 2 steps, got 1/);
+  });
 });
 
 describe('validateFormatDefinitions', () => {
@@ -193,14 +221,14 @@ describe('validateFormatDefinitions', () => {
     expect(() => validateFormatDefinitions(
       [{ orchestrator: 'x.js' }],
       '/f.json',
-    )).toThrow(/missing or invalid required field/);
+    )).toThrow(/formats\[0\]\.name missing or invalid required string field/);
   });
 
   it('throws when orchestrator is missing', () => {
     expect(() => validateFormatDefinitions(
       [{ name: 'blog' }],
       '/f.json',
-    )).toThrow(/missing or invalid required field/);
+    )).toThrow(/formats\[0\]\.orchestrator missing or invalid required string field/);
   });
 
   it('throws on duplicate format name', () => {

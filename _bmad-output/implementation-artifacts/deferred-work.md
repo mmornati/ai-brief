@@ -1,4 +1,8 @@
 # Deferred Work
+## Deferred from: code review of story-2.1 (2026-06-14)
+
+- Contract drift with `types.js` — `loadPipelineDefinition` / `loadFormatDefinition` (Story 1.3, sync, returns `{steps}` / `{formats}`) and `loadSteps` / `loadFormats` (async, returns array) both load the same data with different shapes. Reconcile in a future consolidation story. [`src/pipeline/types.js`]
+
 ## Deferred from: code review of story-1.2 (2026-06-14)
 
 - `src/utils/paths.js` is a stub created per dev notes ("create stubs if they don't exist yet, refine in later stories") — not exercised by story 1.2; refine in a later story

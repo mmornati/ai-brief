@@ -4,7 +4,7 @@ baseline_commit: fcb44e5e442e6b6cf566a49cf4031534274e0ab9
 
 # Story 2.1: Load Step Definitions
 
-Status: review
+Status: done
 
 ## Story
 
@@ -98,3 +98,16 @@ opencode/deepseek-v4-flash-free
 - `test/fixtures/formats-valid.json`
 - `test/fixtures/formats-empty.json`
 - `test/fixtures/formats-bad-ext.json`
+
+## Review Findings
+
+### Patch (applied)
+
+- **assertString field-name bug** — `field.split('[')[0]` produced `"step"` instead of `"name"` in the required-field error. Refactored to a `(value, path, label)` signature; the path now carries the field name directly. `[src/pipeline/step-loader.js:40]`
+- **expectedSequence length mismatch** — passing an `expectedSequence` of a different length produced a misleading "expected undefined" error. Added an explicit length check. `[src/pipeline/step-loader.js:83]`
+- **Path-argument validation** — `loadSteps(123)` / `loadSteps('')` previously gave cryptic `TypeError`s or silently read CWD. Added `assertPathArg`. `[src/pipeline/step-loader.js:46]`
+- **`cause` preservation** — `types.js` preserves `{ cause: err }` on thrown errors; `step-loader.js` did not. Aligned for consistency. `[src/pipeline/step-loader.js:14, 23]`
+
+### Defer (out of scope)
+
+- **[x] Contract drift with `types.js`** — `loadPipelineDefinition` / `loadFormatDefinition` (Story 1.3, sync, returns `{steps}` / `{formats}`) and `loadSteps` / `loadFormats` (async, returns array) both load the same data with different shapes. Reconcile in a future consolidation story. `[src/pipeline/types.js]`

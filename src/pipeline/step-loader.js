@@ -11,7 +11,7 @@ function readJsonSync(raw, absPath, label) {
   try {
     return JSON.parse(raw);
   } catch (err) {
-    throw new Error(`Failed to load ${label}: ${absPath} — ${err.message}`);
+    throw new Error(`Failed to load ${label}: ${absPath} — ${err.message}`, { cause: err });
   }
 }
 
@@ -20,7 +20,7 @@ async function readJsonFile(absPath, label) {
   try {
     raw = await readFile(absPath, 'utf-8');
   } catch (err) {
-    throw new Error(`Failed to load ${label}: ${absPath} — ${err.message}`);
+    throw new Error(`Failed to load ${label}: ${absPath} — ${err.message}`, { cause: err });
   }
   return readJsonSync(raw, absPath, label);
 }
@@ -37,15 +37,20 @@ function assertArray(arr, name, absPath, label) {
   }
 }
 
-function assertString(value, field, index, absPath, label) {
+function assertString(value, path, label) {
   if (typeof value !== 'string' || value.trim() === '') {
-    throw new Error(
-      `Failed to load ${label}: ${absPath} — ${field}[${index}] missing or invalid required field "${field.split('[')[0] || field}"`,
-    );
+    throw new Error(`Failed to load ${label}: ${path} missing or invalid required string field`);
+  }
+}
+
+function assertPathArg(value, label) {
+  if (typeof value !== 'string' || value.trim() === '') {
+    throw new Error(`Failed to load ${label}: path must be a non-empty string`);
   }
 }
 
 export async function loadSteps(pipelinePath, expectedSequence) {
+  assertPathArg(pipelinePath, 'step definitions');
   const absPath = resolve(pipelinePath);
   const parsed = await readJsonFile(absPath, 'step definitions');
 
@@ -61,6 +66,7 @@ export async function loadSteps(pipelinePath, expectedSequence) {
 }
 
 export async function loadFormats(formatsPath) {
+  assertPathArg(formatsPath, 'format definitions');
   const absPath = resolve(formatsPath);
   const parsed = await readJsonFile(absPath, 'format definitions');
 
@@ -75,6 +81,12 @@ export async function loadFormats(formatsPath) {
 }
 
 export function validateStepDefinitions(steps, filePath, expectedSequence) {
+  if (expectedSequence && steps.length !== expectedSequence.length) {
+    throw new Error(
+      `Failed to load step definitions: ${filePath} — expected ${expectedSequence.length} steps, got ${steps.length}`,
+    );
+  }
+
   const seenNames = new Set();
 
   for (let i = 0; i < steps.length; i++) {
@@ -86,9 +98,9 @@ export function validateStepDefinitions(steps, filePath, expectedSequence) {
       );
     }
 
-    assertString(step.name, `step[${i}].name`, i, filePath, 'step definitions');
-    assertString(step.promptFile, `step[${i}].promptFile`, i, filePath, 'step definitions');
-    assertString(step.description, `step[${i}].description`, i, filePath, 'step definitions');
+    assertString(step.name, `step[${i}].name`, 'step definitions');
+    assertString(step.promptFile, `step[${i}].promptFile`, 'step definitions');
+    assertString(step.description, `step[${i}].description`, 'step definitions');
 
     if (seenNames.has(step.name)) {
       throw new Error(
@@ -131,8 +143,8 @@ export function validateFormatDefinitions(formats, filePath) {
       );
     }
 
-    assertString(fmt.name, `formats[${i}].name`, i, filePath, 'format definitions');
-    assertString(fmt.orchestrator, `formats[${i}].orchestrator`, i, filePath, 'format definitions');
+    assertString(fmt.name, `formats[${i}].name`, 'format definitions');
+    assertString(fmt.orchestrator, `formats[${i}].orchestrator`, 'format definitions');
 
     if (seenNames.has(fmt.name)) {
       throw new Error(
