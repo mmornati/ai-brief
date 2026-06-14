@@ -1,4 +1,4 @@
-import { readFile } from 'node:fs/promises';
+import { readFile, unlink as fsUnlink } from 'node:fs/promises';
 import path from 'node:path';
 import { loadSteps, loadFormats } from './step-loader.js';
 import { writeFile, mkdir } from '../utils/file.js';
@@ -27,9 +27,8 @@ export async function runPipeline(inputFile, format, options = {}) {
   const outDir = options.outDir || path.resolve(projectRoot, 'ai-brief-output', 'steps');
   const pipelinePath = options.pipelinePath || path.resolve(projectRoot, 'pipeline-definition', 'pipeline.json');
   const formatsPath = options.formatsPath || path.resolve(projectRoot, 'pipeline-definition', 'formats.json');
-
-  const inputPath = path.resolve(projectRoot, inputFile);
-  const inputContent = await readFile(inputPath, 'utf-8');
+  const startFrom = options.startFrom ?? 0;
+  const accumulatedContext = options.accumulatedContext;
 
   const steps = await loadSteps(pipelinePath);
   const formats = await loadFormats(formatsPath);
@@ -51,9 +50,15 @@ export async function runPipeline(inputFile, format, options = {}) {
     return path.resolve(outDir, `${padded(i)}-${stepName}.md`);
   }
 
-  let accumulatedContent = inputContent;
+  let accumulatedContent;
+  if (accumulatedContext !== undefined) {
+    accumulatedContent = accumulatedContext;
+  } else {
+    const inputPath = path.resolve(projectRoot, inputFile);
+    accumulatedContent = await readFile(inputPath, 'utf-8');
+  }
 
-  for (let i = 0; i < steps.length; i++) {
+  for (let i = startFrom; i < steps.length; i++) {
     const step = steps[i];
 
     try {
@@ -63,6 +68,7 @@ export async function runPipeline(inputFile, format, options = {}) {
 
       await writeFile(outputPath(i, step.name), result);
       await writeFile(markerPath(i, 'completed'), '');
+      try { await fsUnlink(markerPath(i, 'failed')); } catch { }
 
       accumulatedContent = result;
     } catch (err) {

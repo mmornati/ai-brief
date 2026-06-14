@@ -1,6 +1,10 @@
+---
+baseline_commit: 90c027ffc8b276f538837ddca7d29866285ea0bb
+---
+
 # Story 2.3: Pipeline Status & Resume
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -18,18 +22,18 @@ So that I don't lose progress when something goes wrong or I need to take a brea
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Create tracker module (AC: #1-5)
-  - [ ] Create `src/pipeline/tracker.js` with `getStatus()`, `getLastCompletedStep()`, `isComplete()`, `getFailedStep()` functions
-  - [ ] Implement marker file scanning in `ai-brief-output/steps/`
-  - [ ] Implement `resume()` that restores accumulated context from last completed step's output
-- [ ] Task 2: Update CLI (AC: #1-5)
-  - [ ] Wire `status` command to `tracker.getStatus()`
-  - [ ] Wire `resume` command to `tracker.resume()` → calls `runner.runPipeline()` from resume point
-  - [ ] Handle edge cases: no run, complete run, failed run
-- [ ] Task 3: Create tests
-  - [ ] Create `test/pipeline/tracker.test.js`
-  - [ ] Test with various marker states (no markers, partial, complete, failed)
-  - [ ] Test resume context restoration
+- [x] Task 1: Create tracker module (AC: #1-5)
+  - [x] Create `src/pipeline/tracker.js` with `getStatus()`, `getLastCompletedStep()`, `isComplete()`, `getFailedStep()` functions
+  - [x] Implement marker file scanning in `ai-brief-output/steps/`
+  - [x] Implement `resume()` that restores accumulated context from last completed step's output
+- [x] Task 2: Update CLI (AC: #1-5)
+  - [x] Wire `status` command to `tracker.getStatus()`
+  - [x] Wire `resume` command to `tracker.resume()` → calls `runner.runPipeline()` from resume point
+  - [x] Handle edge cases: no run, complete run, failed run
+- [x] Task 3: Create tests
+  - [x] Create `test/pipeline/tracker.test.js`
+  - [x] Test with various marker states (no markers, partial, complete, failed)
+  - [x] Test resume context restoration
 
 ## Dev Notes
 
@@ -82,12 +86,25 @@ So that I don't lose progress when something goes wrong or I need to take a brea
 
 ### Agent Model Used
 
+deepseek-v4-flash-free
+
 ### Debug Log References
+
+- All 159 tests pass (including 12 new tracker tests, updated sanity tests)
+- Runner updated: added `startFrom`/`accumulatedContext` options + `.failed` marker cleanup on successful resume
 
 ### Completion Notes List
 
+- Created `src/pipeline/tracker.js` with `getStatus()`, `getLastCompletedStep()`, `getFailedStep()`, `isComplete()`, `resume()` functions
+- Updated `src/pipeline/runner.js` to support `startFrom` and `accumulatedContext` options for resume workflow; also removes `.failed` marker on successful step completion during resume
+- Updated `src/cli.js`: wired `status` command to `tracker.getStatus()` with formatted table output; wired `resume` command to `tracker.resume()` with input file and --format args; handles edge cases (no run, complete run, failed run)
+- Created `test/pipeline/tracker.test.js` with 12 tests covering all marker states and resume scenarios
+
 ### File List
 
-- `src/pipeline/tracker.js`
-- `src/cli.js` (update)
-- `test/pipeline/tracker.test.js`
+- `src/pipeline/tracker.js` (new)
+- `src/pipeline/runner.js` (updated)
+- `src/cli.js` (updated)
+- `test/pipeline/tracker.test.js` (new)
+- `test/sanity.test.js` (updated)
+- `_bmad-output/implementation-artifacts/story-2.3.md` (updated)

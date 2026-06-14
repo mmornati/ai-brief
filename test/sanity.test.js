@@ -51,9 +51,15 @@ describe('CLI entry point', () => {
     expect(r.stderr).toMatch(/Unknown command: bogus-command/);
   });
 
-  it('known command runs the stub and exits 0', () => {
+  it('known command without args prints usage and exits 1', () => {
     const r = run(['status']);
-    expect(r.status).toBe(0);
-    expect(r.stdout).toMatch(/ai-brief status/);
+    expect(r.status).toBe(1);
+    expect(r.stderr).toMatch(/Usage: ai-brief status/);
+  });
+
+  it('run without --format exits 1', () => {
+    const r = run(['run', 'docs/test.md']);
+    expect(r.status).toBe(1);
+    expect(r.stderr).toMatch(/--format is required/);
   });
 });
