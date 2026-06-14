@@ -14,6 +14,13 @@ ai-brief-output/
 .step-*.completed
 .step-*.failed
 
+# VitePress documentation build output
+docs/.vitepress/dist/
+docs/.vitepress/cache/
+
+# Backup files from install.sh
+*.bak
+
 # Local environment and IDE config
 .env
 .env.*
@@ -22,7 +29,5 @@ ai-brief-output/
 _bmad/
 .vscode/
 .idea/
-.DS_Store
 *.swp
 *.swo
-*~

@@ -10,7 +10,10 @@
   "scripts": {
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "docs:dev": "npm run docs:dev --prefix docs",
+    "docs:build": "npm run docs:build --prefix docs",
+    "docs:preview": "npm run docs:preview --prefix docs"
   },
   "devDependencies": {
     "vitest": "^3.0.0"

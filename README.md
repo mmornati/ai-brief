@@ -1,49 +1,185 @@
-# AI Brief
+<div align="center">
+  <br/>
+  <img src="docs/public/ai-brief-logo.svg" alt="AI Brief" width="180" height="180"/>
+  <br/>
+  <h1>📋 AI Brief</h1>
+  <p><strong>Turn raw ideas into polished content — blog posts, slide decks, and structured briefs — powered by AI coding assistants.</strong></p>
 
-AI-powered pipeline for generating structured briefs, stories, and development plans using opencode and Claude Code.
+  <p>
+    <a href="https://github.com/mmornati/ai-brief#readme"><img src="https://img.shields.io/badge/docs-readme-blue?style=flat-square" alt="Readme"/></a>
+    <a href="https://mmornati.github.io/ai-brief/"><img src="https://img.shields.io/badge/docs-website-8A2BE2?style=flat-square" alt="Documentation"/></a>
+    <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green?style=flat-square" alt="MIT License"/></a>
+    <a href="https://nodejs.org/"><img src="https://img.shields.io/badge/node-%3E%3D18-339933?style=flat-square&logo=node.js" alt="Node.js"/></a>
+  </p>
+  <br/>
+</div>
 
-## Install
+---
 
-To use ai-brief in your project:
+AI Brief is a **content generation pipeline** that runs inside your AI coding assistant — **opencode** or **Claude Code**. Feed it a raw markdown file with ideas, and it walks through six structured steps (validate → research → structure → write → format → review) to produce publication-ready content.
+
+```mermaid
+flowchart LR
+    A[Raw Idea<br/>.md file] --> B[Validate]
+    B --> C[Research]
+    C --> D[Structure]
+    D --> E[Write]
+    E --> F[Format]
+    F --> G[Review]
+    G --> H[Blog Post<br/>or Slide Deck]
+    
+    style A fill:#f9f,stroke:#333
+    style H fill:#9f9,stroke:#333
+```
+
+## ✨ Features
+
+- **🧠 AI-native pipeline** — each step is a fresh AI invocation with accumulated context; no API keys, no SaaS, no setup
+- **📝 Multi-format output** — generate blog posts (with YAML frontmatter) or Marp-compatible slide decks
+- **🛠️ Fully customizable** — every step prompt and output template is a plain markdown file you can edit
+- **🔄 Resumable** — pipeline state is saved per-step; pick up where you left off with `resume`
+- **🔌 IDE-agnostic** — works with both opencode and Claude Code; install once, use everywhere
+- **📂 Editable intermediates** — inspect and edit step outputs at any stage before the final artifact
+- **📦 Zero runtime dependencies** — pure Node.js with no npm dependencies (Vitest is dev-only)
+
+## 🚀 Quick Start
 
 ```bash
+# Clone the repo
 git clone https://github.com/mmornati/ai-brief.git
-./install.sh                       # install skills into the current project
-./install.sh /path/to/your-project # install skills into a specific project
-./install.sh --dry-run             # preview what would be installed
+cd ai-brief
+
+# Run the pipeline on a markdown file
+node src/cli.js run my-idea.md --format blog
+
+# Check pipeline status
+node src/cli.js status my-idea.md
+
+# Resume from the last completed step
+node src/cli.js resume my-idea.md --format blog
 ```
 
-`install.sh` auto-detects opencode (`.opencode/`) and Claude Code (`.claude/`)
-in the target project, registers the `ai-brief-*` skills, and copies templates
-and step prompts to `ai-brief/templates/` and `ai-brief/steps/`. Reinstalls
-back up modified files to `.bak` before overwriting.
+## 🔧 Installation into a Project
 
-> **Note:** Generated skill files under `.opencode/agents/skills/ai-brief-*/`
-> and `.claude/skills/ai-brief-*/` are fully derived from
-> `pipeline-definition/pipeline.json` and `pipeline-definition/formats.json`,
-> and are **overwritten on every `./install.sh` run**. Do not edit them by
-> hand — change the pipeline definition instead.
-
-## Usage
+AI Brief can be installed into any project that uses opencode or Claude Code, registering custom AI skills:
 
 ```bash
-node src/cli.js --help
+./install.sh                                    # auto-detect IDE in current dir
+./install.sh /path/to/your-project              # install into specific project
+./install.sh --dry-run                          # preview changes
 ```
 
-Available commands:
-- `init` — Scaffold a new project in the target directory
-- `run` — Execute the full pipeline
-- `status` — Show current pipeline status
-- `resume` — Resume a paused pipeline from the last completed step
+The installer:
+1. Auto-detects opencode (`.opencode/`) and Claude Code (`.claude/`) in the target
+2. Registers pipeline skills (`ai-brief-validate`, `ai-brief-blog`, etc.)
+3. Copies templates to `ai-brief/templates/` and step prompts to `ai-brief/steps/`
+4. Backs up existing files with `.bak` before overwriting
 
-## Development
+> **Note:** Skill files under `.opencode/agents/skills/ai-brief-*/` are derived from `pipeline-definition/` and overwritten on every install. Edit the pipeline definition instead.
+
+## 📖 Pipeline Steps
+
+| # | Step | Purpose |
+|---|------|---------|
+| 1 | **Validate** | Checks input for structure, spelling, and completeness |
+| 2 | **Research** | Gathers domain context and relevant sources |
+| 3 | **Structure** | Builds a content outline from the validated input |
+| 4 | **Write** | Composes full content from the outline |
+| 5 | **Format** | Applies the target format template (blog or slides) |
+| 6 | **Review** | Adversarial review pass to polish the final artifact |
+
+Each step writes its output to `ai-brief-output/steps/` for inspection and editing.
+
+## 🎨 Output Formats
+
+### Blog Post
+Generates markdown with YAML frontmatter (title, date, tags, draft status) — compatible with static site generators like Jekyll, Hugo, and Vitepress.
+
+### Slide Deck
+Generates Marp-compatible markdown with `---` slide separators and speaker notes — ready to present with [Marp](https://marp.app/).
+
+## 💻 CLI Commands
+
+```
+ai-brief <command> [options]
+
+Commands:
+  init      Scaffold a new project in the target directory
+  run       Execute the full pipeline on a markdown input file
+  status    Show current pipeline status
+  resume    Resume a paused pipeline from the last completed step
+
+Run command options:
+  --format <format>   Output format (blog|slides)
+
+Examples:
+  ai-brief run docs/idea.md --format blog
+  ai-brief run docs/idea.md --format slides
+  ai-brief status docs/idea.md
+  ai-brief resume docs/idea.md --format blog
+```
+
+## 🧪 Development
 
 ```bash
+# Run tests
 npm test
+
+# Watch mode
 npm run test:watch
+
+# With coverage
 npm run test:coverage
 ```
 
-## License
+## 📚 Documentation
 
-MIT
+Full documentation is available at **[mmornati.github.io/ai-brief](https://mmornati.github.io/ai-brief/)** covering:
+
+- [Getting Started](https://mmornati.github.io/ai-brief/guide/getting-started)
+- [Installation Guide](https://mmornati.github.io/ai-brief/guide/installation)
+- [CLI Usage](https://mmornati.github.io/ai-brief/guide/usage)
+- [Pipeline Architecture](https://mmornati.github.io/ai-brief/guide/pipeline)
+- [Output Formats](https://mmornati.github.io/ai-brief/guide/formats)
+- [Customization](https://mmornati.github.io/ai-brief/guide/customization)
+- [Development Guide](https://mmornati.github.io/ai-brief/guide/development)
+
+## 🏗️ Architecture
+
+```
+ai-brief/
+├── src/
+│   ├── cli.js                 # CLI entry point
+│   ├── install.js             # Install script logic
+│   ├── pipeline/
+│   │   ├── runner.js          # Sequential step execution
+│   │   ├── step-loader.js     # Loads pipeline/format definitions
+│   │   └── tracker.js         # Per-step state tracking + resume
+│   ├── formats/
+│   │   ├── base.js            # Abstract format writer
+│   │   ├── blog.js            # Blog post renderer
+│   │   ├── slides.js          # Slide deck renderer (Marp)
+│   │   ├── opencode.js        # opencode skill generator
+│   │   └── claude.js          # Claude Code skill generator
+│   ├── templates/
+│   │   ├── resolver.js        # Template resolution chain
+│   │   ├── default/           # Built-in templates
+│   │   └── user/              # User override templates
+│   └── utils/
+│       ├── file.js            # Filesystem utilities
+│       └── paths.js           # Path resolution
+├── steps/                     # Pipeline step prompt files
+├── pipeline-definition/       # Pipeline JSON configuration
+├── test/                      # Test suite (Vitest)
+└── docs/                      # VitePress documentation site
+```
+
+## 📄 License
+
+MIT — see [LICENSE](LICENSE).
+
+---
+
+<p align="center">
+  Built with ❤️ by <a href="https://github.com/mmornati">mmornati</a>
+</p>
