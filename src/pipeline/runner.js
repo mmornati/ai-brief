@@ -82,5 +82,5 @@ export async function runPipeline(inputFile, format, options = {}) {
   }
 
   const orchestrator = await loadFormatOrchestrator(formatDef, projectRoot);
-  await orchestrator(accumulatedContent);
+  await orchestrator(accumulatedContent, { inputFile, format });
 }

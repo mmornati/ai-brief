@@ -2,7 +2,7 @@
   "formats": [
     {
       "name": "blog",
-      "orchestrator": "src/formats/opencode.js"
+      "orchestrator": "src/formats/blog.js"
     },
     {
       "name": "slides",

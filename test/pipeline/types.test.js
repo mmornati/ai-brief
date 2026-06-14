@@ -332,7 +332,7 @@ describe('loadFormatDefinition', () => {
   it('loads the real formats.json', () => {
     const result = loadFormatDefinition(FORMATS_PATH);
     expect(result.formats).toHaveLength(2);
-    expect(result.formats[0]).toEqual({ name: 'blog', orchestrator: 'src/formats/opencode.js' });
+    expect(result.formats[0]).toEqual({ name: 'blog', orchestrator: 'src/formats/blog.js' });
     expect(result.formats[1]).toEqual({ name: 'slides', orchestrator: 'src/formats/claude.js' });
   });
 

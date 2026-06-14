@@ -87,8 +87,8 @@ describe('Step prompt files (AC #1, #3, #4, #5)', () => {
 describe('Default templates (AC #2, #3)', () => {
   const templateFiles = listMarkdownFiles(TEMPLATES_DIR);
 
-  it('templates/ contains brief, story, and slide', () => {
-    expect(templateFiles.sort()).toEqual(['brief.md', 'slide.md', 'story.md']);
+  it('templates/ contains brief, story, slide, and blog', () => {
+    expect(templateFiles.sort()).toEqual(['blog.md', 'brief.md', 'slide.md', 'story.md']);
   });
 
   it('all template files are kebab-case and exist on disk', () => {
