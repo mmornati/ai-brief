@@ -1,4 +1,10 @@
 # Deferred Work
+## Deferred from: code review of story-3.3 (2026-06-14)
+
+- Template fallback error message check fragility — `err.message.includes('not found. Tried:')` is brittle against message format changes. Pre-existing concern, not a regression. [`src/formats/base.js:52`]
+- Module-level singleton writer instances — `const writer = new BlogWriter()` at module scope creates shared state. Pre-existing pattern, not a bug. [`src/formats/blog.js:61`, `src/formats/slides.js:69`]
+- blog.js template `.replace()` first-only — Only replaces first `{{content}}` occurrence. Pre-existing, not introduced by this change. [`src/formats/blog.js:76`]
+- No validation that `formatName` is non-empty — Subclasses always pass valid strings. Pre-existing concern. [`src/formats/base.js:7-13`]
 ## Deferred from: code review of story-3.2 (2026-06-14)
 
 - Speaker notes in fenced code blocks extracted — `extractSpeakerNote` has no code-fence awareness; unlikely in pipeline content [`src/formats/slides.js:16-22`]

@@ -1,17 +1,4 @@
-import path from 'node:path';
-import { getProjectRoot } from '../utils/paths.js';
-import { resolveTemplate } from '../templates/resolver.js';
-import { readFile, writeFile, mkdir } from '../utils/file.js';
-
-function parseTitle(content, inputFile) {
-  const match = content.match(/^# (.+)/m);
-  if (match) return match[1].trim();
-  if (inputFile) {
-    const base = path.basename(inputFile, path.extname(inputFile));
-    if (base) return base.replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-  }
-  return 'Untitled';
-}
+import { FormatWriter } from './base.js';
 
 function extractTags(content) {
   const lines = content.split('\n');
@@ -67,43 +54,36 @@ function ensureHeadings(body) {
   return lines.join('\n');
 }
 
+class BlogWriter extends FormatWriter {
+  constructor() {
+    super('blog', 'blog.md', 'post');
+  }
+
+  async render(accumulatedContent, metadata = {}) {
+    if (typeof accumulatedContent !== 'string' || accumulatedContent.trim().length === 0) {
+      throw new Error('Cannot generate blog post: accumulated content is empty');
+    }
+
+    const title = this.parseTitle(accumulatedContent, metadata.inputFile);
+    const tags = extractTags(accumulatedContent);
+    const frontmatter = generateFrontmatter(title, tags);
+
+    let body = extractBody(accumulatedContent);
+    body = ensureHeadings(body);
+
+    const templateContent = await this.readTemplate();
+    const output = templateContent !== null
+      ? templateContent.replace('{{frontmatter}}', frontmatter).replace('{{content}}', body)
+      : frontmatter + '\n\n' + body;
+
+    return this.writeOutput(metadata.inputFile, output);
+  }
+}
+
+const writer = new BlogWriter();
+
 export async function render(accumulatedContent, metadata = {}) {
-  if (typeof accumulatedContent !== 'string' || accumulatedContent.trim().length === 0) {
-    throw new Error('Cannot generate blog post: accumulated content is empty');
-  }
-
-  const projectRoot = getProjectRoot();
-  const inputName = metadata.inputFile
-    ? path.basename(metadata.inputFile, path.extname(metadata.inputFile))
-    : 'post';
-
-  const title = parseTitle(accumulatedContent, metadata.inputFile);
-  const tags = extractTags(accumulatedContent);
-  const frontmatter = generateFrontmatter(title, tags);
-
-  let body = extractBody(accumulatedContent);
-  body = ensureHeadings(body);
-
-  let output;
-  try {
-    const templatePath = await resolveTemplate('blog.md');
-    const templateContent = await readFile(templatePath);
-    output = templateContent
-      .replace('{{frontmatter}}', frontmatter)
-      .replace('{{content}}', body);
-  } catch (err) {
-    if (!err.message.includes('not found')) throw err;
-    output = frontmatter + '\n\n' + body;
-  }
-
-  const outDir = path.resolve(projectRoot, 'ai-brief-output', 'blog');
-  await mkdir(outDir);
-  const outPath = path.resolve(outDir, `${inputName}-blog.md`);
-  await writeFile(outPath, output);
-
-  return outPath;
+  return writer.render(accumulatedContent, metadata);
 }
 
-export default async function orchestrate(accumulatedContent, metadata = {}) {
-  return render(accumulatedContent, metadata);
-}
+export default render;

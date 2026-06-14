@@ -1,17 +1,4 @@
-import path from 'node:path';
-import { getProjectRoot } from '../utils/paths.js';
-import { resolveTemplate } from '../templates/resolver.js';
-import { readFile, writeFile, mkdir } from '../utils/file.js';
-
-function parseTitle(content, inputFile) {
-  const match = content.match(/^# (.+)/m);
-  if (match) return match[1].trim();
-  if (inputFile) {
-    const base = path.basename(inputFile, path.extname(inputFile));
-    if (base) return base.replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-  }
-  return 'Untitled';
-}
+import { FormatWriter } from './base.js';
 
 function extractSpeakerNote(line) {
   const noteMatch = line.match(/^Note:\s*(.+)/i);
@@ -76,50 +63,45 @@ function formatSlide(slide) {
   return output;
 }
 
+class SlidesWriter extends FormatWriter {
+  constructor() {
+    super('slides', 'slide.md', 'deck');
+  }
+
+  async render(accumulatedContent, metadata = {}) {
+    if (typeof accumulatedContent !== 'string' || accumulatedContent.trim().length === 0) {
+      throw new Error('Cannot generate slide deck: accumulated content is empty');
+    }
+
+    const title = this.parseTitle(accumulatedContent, metadata.inputFile);
+    const { titleSlide, slides } = segmentSlides(accumulatedContent);
+
+    const titleContent = titleSlide ? titleSlide.content.replace(/^# .+\n*/, '').trim() : '';
+    let titleSlideText = `# ${title}`;
+    if (titleContent) {
+      titleSlideText += '\n\n' + titleContent;
+    }
+    if (titleSlide && titleSlide.notes.length > 0) {
+      titleSlideText += '\n\n' + titleSlide.notes.map(n => `<!-- speaker: ${escapeNote(n)} -->`).join('\n');
+    }
+
+    const bodySlides = slides.map(s => formatSlide(s));
+    const allSlides = [titleSlideText, ...bodySlides];
+    const deckContent = allSlides.join('\n\n---\n\n');
+
+    const templateContent = await this.readTemplate();
+    const output = templateContent !== null
+      ? templateContent.replaceAll('{{slides}}', deckContent)
+      : deckContent;
+
+    return this.writeOutput(metadata.inputFile, output);
+  }
+}
+
+const writer = new SlidesWriter();
+
 export async function render(accumulatedContent, metadata = {}) {
-  if (typeof accumulatedContent !== 'string' || accumulatedContent.trim().length === 0) {
-    throw new Error('Cannot generate slide deck: accumulated content is empty');
-  }
-
-  const projectRoot = getProjectRoot();
-  const inputName = metadata.inputFile
-    ? path.basename(metadata.inputFile, path.extname(metadata.inputFile))
-    : 'deck';
-
-  const title = parseTitle(accumulatedContent, metadata.inputFile);
-  const { titleSlide, slides } = segmentSlides(accumulatedContent);
-
-  const titleContent = titleSlide ? titleSlide.content.replace(/^# .+\n*/, '').trim() : '';
-  let titleSlideText = `# ${title}`;
-  if (titleContent) {
-    titleSlideText += '\n\n' + titleContent;
-  }
-  if (titleSlide && titleSlide.notes.length > 0) {
-    titleSlideText += '\n\n' + titleSlide.notes.map(n => `<!-- speaker: ${escapeNote(n)} -->`).join('\n');
-  }
-
-  const bodySlides = slides.map(s => formatSlide(s));
-  const allSlides = [titleSlideText, ...bodySlides];
-  const deckContent = allSlides.join('\n\n---\n\n');
-
-  let output;
-  try {
-    const templatePath = await resolveTemplate('slide.md');
-    const templateContent = await readFile(templatePath);
-    output = templateContent.replaceAll('{{slides}}', deckContent);
-  } catch (err) {
-    if (!err.message.includes('not found. Tried:')) throw err;
-    output = deckContent;
-  }
-
-  const outDir = path.resolve(projectRoot, 'ai-brief-output', 'slides');
-  await mkdir(outDir);
-  const outPath = path.resolve(outDir, `${inputName}-slides.md`);
-  await writeFile(outPath, output);
-
-  return outPath;
+  return writer.render(accumulatedContent, metadata);
 }
 
-export default async function orchestrate(accumulatedContent, metadata = {}) {
-  return render(accumulatedContent, metadata);
-}
+export default render;
