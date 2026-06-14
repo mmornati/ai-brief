@@ -261,4 +261,70 @@ describe('install', () => {
     expect(fs.readFileSync(path.join(targetFormatDir, 'user.md'), 'utf-8')).toBe('# user override\n');
     expect(fs.readFileSync(path.join(targetFormatDir, 'default.md'), 'utf-8')).toBe('# new default\n');
   });
+
+  it('creates a .bak of the previous default template when it is overwritten (AC3)', async () => {
+    const sourceRoot = tmpDir;
+    await mkdir(path.join(sourceRoot, 'src', 'templates', 'default'));
+    fs.writeFileSync(path.join(sourceRoot, 'src', 'templates', 'default', 'brief.md'), '# new default\n');
+
+    const targetFormatDir = path.join(projectDir, 'ai-brief', 'templates', 'brief');
+    await mkdir(targetFormatDir);
+    fs.writeFileSync(path.join(targetFormatDir, 'default.md'), '# old default\n');
+    await mkdir(path.join(projectDir, '.opencode'));
+
+    const { install } = await import('../src/install.js');
+    await install(projectDir, { ides: ['opencode'], sourceRoot });
+
+    const bakPath = path.join(targetFormatDir, 'default.md.bak');
+    expect(await exists(bakPath)).toBe(true);
+    expect(fs.readFileSync(bakPath, 'utf-8')).toBe('# old default\n');
+  });
+
+  it('logs the user-template preservation message under --dry-run', async () => {
+    const sourceRoot = tmpDir;
+    await mkdir(path.join(sourceRoot, 'src', 'templates', 'default'));
+    fs.writeFileSync(path.join(sourceRoot, 'src', 'templates', 'default', 'brief.md'), '# default\n');
+
+    const targetFormatDir = path.join(projectDir, 'ai-brief', 'templates', 'brief');
+    await mkdir(targetFormatDir);
+    fs.writeFileSync(path.join(targetFormatDir, 'default.md'), '# old default\n');
+    fs.writeFileSync(path.join(targetFormatDir, 'user.md'), '# user override\n');
+    await mkdir(path.join(projectDir, '.opencode'));
+
+    const { install } = await import('../src/install.js');
+    await install(projectDir, { ides: ['opencode'], dryRun: true, sourceRoot });
+
+    const flatCalls = logSpy.mock.calls.map(args => String(args[0])).join('\n');
+    expect(flatCalls).toMatch(/\[dry-run\][^\n]*preserving user template[^\n]*user\.md/);
+    expect(fs.readFileSync(path.join(targetFormatDir, 'default.md'), 'utf-8')).toBe('# old default\n');
+    expect(fs.readFileSync(path.join(targetFormatDir, 'user.md'), 'utf-8')).toBe('# user override\n');
+  });
+
+  it('rejects a default template with an empty stem (e.g. ".md") with InstallError', async () => {
+    const sourceRoot = tmpDir;
+    await mkdir(path.join(sourceRoot, 'src', 'templates', 'default'));
+    fs.writeFileSync(path.join(sourceRoot, 'src', 'templates', 'default', '.md'), '# weird\n');
+    await mkdir(path.join(projectDir, '.opencode'));
+
+    const { install, InstallError } = await import('../src/install.js');
+    await expect(
+      install(projectDir, { ides: ['opencode'], sourceRoot })
+    ).rejects.toBeInstanceOf(InstallError);
+  });
+
+  it('treats src/templates/user being a regular file as no user templates', async () => {
+    const sourceRoot = tmpDir;
+    await mkdir(path.join(sourceRoot, 'src', 'templates', 'default'));
+    fs.writeFileSync(path.join(sourceRoot, 'src', 'templates', 'default', 'brief.md'), '# default\n');
+    fs.writeFileSync(path.join(sourceRoot, 'src', 'templates', 'user'), 'not a directory');
+    await mkdir(path.join(projectDir, '.opencode'));
+
+    const { install } = await import('../src/install.js');
+    await expect(
+      install(projectDir, { ides: ['opencode'], sourceRoot })
+    ).resolves.not.toThrow();
+
+    const userDest = path.join(projectDir, 'ai-brief', 'templates', 'brief', 'user.md');
+    expect(await exists(userDest)).toBe(false);
+  });
 });

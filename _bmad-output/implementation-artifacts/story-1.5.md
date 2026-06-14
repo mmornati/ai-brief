@@ -32,7 +32,7 @@ So that I can adapt ai-brief to my workflow without fighting the tool.
 
 ## Dev Notes
 
-- **Resolver API:** `resolveTemplate(templateName: string): string` returns the resolved file path
+- **Resolver API:** `resolveTemplate(templateName: string): Promise<string>` returns the resolved file path
 - **Resolution order:** `src/templates/user/<templateName>` → `src/templates/default/<templateName>` → throw
 - **Install integration:** During `install.sh`, compare default template hashes. If a default changed and a `.bak` doesn't exist (or last backup differs), rename existing → copy new default
 - **File utils:** Reuse/extend `src/utils/file.js` from Story 1.2 for copy, rename, hash comparison
@@ -49,6 +49,7 @@ So that I can adapt ai-brief to my workflow without fighting the tool.
 
 - Implemented template resolver with user-first override chain (2026-06-14)
 - Added user template deployment and backup logic to install.js (2026-06-14)
+- Hardened resolver (input validation, file-vs-dir check) and install (constants, dry-run log, basename guard) following code review (2026-06-14)
 
 ### References
 

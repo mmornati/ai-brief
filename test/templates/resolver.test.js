@@ -68,6 +68,34 @@ describe('resolveTemplateFrom', () => {
       expect(err.message).toContain(path.join(tmpDir, 'default', 'missing.md'));
     }
   });
+
+  it('rejects path-traversal templateName with ".." segments', async () => {
+    const { resolveTemplateFrom } = await import('../../src/templates/resolver.js');
+    await expect(resolveTemplateFrom('../foo.md', tmpDir)).rejects.toThrow(/must not contain "\.\." segments/);
+    await expect(resolveTemplateFrom('a/../b.md', tmpDir)).rejects.toThrow(/must not contain "\.\." segments/);
+  });
+
+  it('rejects templateName containing path separators or NUL', async () => {
+    const { resolveTemplateFrom } = await import('../../src/templates/resolver.js');
+    await expect(resolveTemplateFrom('a/b.md', tmpDir)).rejects.toThrow(/path separators/);
+    await expect(resolveTemplateFrom('a\\b.md', tmpDir)).rejects.toThrow(/path separators/);
+    await expect(resolveTemplateFrom('foo\u0000bar.md', tmpDir)).rejects.toThrow(/path separators/);
+  });
+
+  it('rejects non-string templateName with a TypeError', async () => {
+    const { resolveTemplateFrom } = await import('../../src/templates/resolver.js');
+    await expect(resolveTemplateFrom(undefined, tmpDir)).rejects.toBeInstanceOf(TypeError);
+    await expect(resolveTemplateFrom('', tmpDir)).rejects.toBeInstanceOf(TypeError);
+    await expect(resolveTemplateFrom(123, tmpDir)).rejects.toBeInstanceOf(TypeError);
+  });
+
+  it('skips a directory shaped like the template name (isFile check, not just exists)', async () => {
+    fs.writeFileSync(path.join(tmpDir, 'default', 'custom.md'), '# default custom\n');
+    fs.mkdirSync(path.join(tmpDir, 'user', 'custom.md'), { recursive: true });
+    const { resolveTemplateFrom } = await import('../../src/templates/resolver.js');
+    const result = await resolveTemplateFrom('custom.md', tmpDir);
+    expect(result).toBe(path.join(tmpDir, 'default', 'custom.md'));
+  });
 });
 
 describe('resolveTemplate', () => {

@@ -19,6 +19,15 @@ export async function isDir(filePath) {
   }
 }
 
+export async function isFile(filePath) {
+  try {
+    const s = await fsp.stat(filePath);
+    return s.isFile();
+  } catch {
+    return false;
+  }
+}
+
 export async function mkdir(dirPath) {
   await fsp.mkdir(dirPath, { recursive: true });
 }

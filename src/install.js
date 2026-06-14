@@ -1,6 +1,6 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { exists, isDir, copy, backup, readdir, stat } from './utils/file.js';
+import { exists, isDir, isFile, copy, backup, readdir, stat } from './utils/file.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = path.resolve(__dirname, '..');
@@ -10,6 +10,19 @@ export class InstallError extends Error {
     super(message);
     this.name = 'InstallError';
   }
+}
+
+const USER_TEMPLATE_FILENAME = 'user.md';
+const DEFAULT_TEMPLATE_FILENAME = 'default.md';
+
+function formatNameFromTmplFile(tmplFile) {
+  const formatName = path.basename(tmplFile, '.md');
+  if (formatName.length === 0 || formatName === '.' || formatName === '..') {
+    throw new InstallError(
+      `Invalid template filename "${tmplFile}": must have a non-empty stem before ".md"`
+    );
+  }
+  return formatName;
 }
 
 function getSourceDirs(sourceRoot) {
@@ -68,7 +81,7 @@ async function getTemplateFormats(sourceRoot) {
 
 async function getUserTemplateFormats(sourceRoot) {
   const sourceDirs = getSourceDirs(sourceRoot);
-  if (!(await exists(sourceDirs.userTemplates))) {
+  if (!(await isDir(sourceDirs.userTemplates))) {
     return [];
   }
   const entries = await readdir(sourceDirs.userTemplates);
@@ -76,8 +89,8 @@ async function getUserTemplateFormats(sourceRoot) {
 }
 
 async function userTemplateExists(targetDir, formatName) {
-  const dest = path.join(targetDir, TARGET_TEMPLATES_DIR, formatName, 'user.md');
-  return exists(dest);
+  const dest = path.join(targetDir, TARGET_TEMPLATES_DIR, formatName, USER_TEMPLATE_FILENAME);
+  return isFile(dest);
 }
 
 async function getStepFiles(sourceRoot) {
@@ -131,16 +144,16 @@ async function deployTemplates(targetDir, dryRun, sourceRoot) {
   const sourceDirs = getSourceDirs(sourceRoot);
   const templateFormats = await getTemplateFormats(sourceRoot);
   for (const tmplFile of templateFormats) {
-    const formatName = path.basename(tmplFile, '.md');
+    const formatName = formatNameFromTmplFile(tmplFile);
 
     const src = path.join(sourceDirs.templates, tmplFile);
-    const dest = path.join(targetDir, TARGET_TEMPLATES_DIR, formatName, 'default.md');
+    const dest = path.join(targetDir, TARGET_TEMPLATES_DIR, formatName, DEFAULT_TEMPLATE_FILENAME);
 
-    const userOverrideDest = path.join(targetDir, TARGET_TEMPLATES_DIR, formatName, 'user.md');
-    const hasUserOverride = await exists(userOverrideDest);
-
-    if (hasUserOverride && !dryRun) {
-      console.log(`  preserving user template for ${tmplFile} → ${userOverrideDest}`);
+    const hasUserOverride = await userTemplateExists(targetDir, formatName);
+    if (hasUserOverride) {
+      const userOverrideDest = path.join(targetDir, TARGET_TEMPLATES_DIR, formatName, USER_TEMPLATE_FILENAME);
+      const prefix = dryRun ? '[dry-run] ' : '  ';
+      console.log(`${prefix}preserving user template for ${tmplFile} → ${userOverrideDest}`);
     }
 
     await copyWithBackup(
@@ -153,16 +166,13 @@ async function deployTemplates(targetDir, dryRun, sourceRoot) {
 
   const userTemplateFormats = await getUserTemplateFormats(sourceRoot);
   for (const tmplFile of userTemplateFormats) {
-    const formatName = path.basename(tmplFile, '.md');
+    const formatName = formatNameFromTmplFile(tmplFile);
     const src = path.join(sourceDirs.userTemplates, tmplFile);
-    const dest = path.join(targetDir, TARGET_TEMPLATES_DIR, formatName, 'user.md');
+    const dest = path.join(targetDir, TARGET_TEMPLATES_DIR, formatName, USER_TEMPLATE_FILENAME);
 
-    if (await exists(dest)) {
-      if (!dryRun) {
-        console.log(`  user template already exists, skipping: ${dest}`);
-      } else {
-        console.log(`[dry-run] would skip existing user template: ${dest}`);
-      }
+    if (await isFile(dest)) {
+      const prefix = dryRun ? '[dry-run] ' : '  ';
+      console.log(`${prefix}user template already exists, skipping: ${dest}`);
       continue;
     }
 
