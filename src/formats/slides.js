@@ -63,10 +63,14 @@ function segmentSlides(content) {
   return { titleSlide, slides };
 }
 
+function escapeNote(note) {
+  return note.replace(/-->/g, '-- >');
+}
+
 function formatSlide(slide) {
   let output = slide.content;
   if (slide.notes.length > 0) {
-    const noteLines = slide.notes.map(n => `<!-- speaker: ${n} -->`);
+    const noteLines = slide.notes.map(n => `<!-- speaker: ${escapeNote(n)} -->`);
     output += '\n\n' + noteLines.join('\n');
   }
   return output;
@@ -91,7 +95,7 @@ export async function render(accumulatedContent, metadata = {}) {
     titleSlideText += '\n\n' + titleContent;
   }
   if (titleSlide && titleSlide.notes.length > 0) {
-    titleSlideText += '\n\n' + titleSlide.notes.map(n => `<!-- speaker: ${n} -->`).join('\n');
+    titleSlideText += '\n\n' + titleSlide.notes.map(n => `<!-- speaker: ${escapeNote(n)} -->`).join('\n');
   }
 
   const bodySlides = slides.map(s => formatSlide(s));
@@ -102,9 +106,9 @@ export async function render(accumulatedContent, metadata = {}) {
   try {
     const templatePath = await resolveTemplate('slide.md');
     const templateContent = await readFile(templatePath);
-    output = templateContent.replace('{{slides}}', deckContent);
+    output = templateContent.replaceAll('{{slides}}', deckContent);
   } catch (err) {
-    if (!err.message.includes('not found')) throw err;
+    if (!err.message.includes('not found. Tried:')) throw err;
     output = deckContent;
   }
 

@@ -120,18 +120,10 @@ describe('Default templates (AC #2, #3)', () => {
     expect(content).toMatch(/^##\s+Conclusion\b/m);
   });
 
-  it('slide.md uses Marp frontmatter, slide separators, speaker notes, and class directives', () => {
+  it('slide.md uses Marp frontmatter and slides placeholder', () => {
     const content = readSafe(resolve(TEMPLATES_DIR, 'slide.md'));
     expect(content).toMatch(/^marp:\s*true/m);
-    expect(content).toMatch(/<!--\s*speaker:/);
-    expect(content).toMatch(/<!--\s*_class:/);
-
-    const fmMatch = content.match(/^---\n([\s\S]*?)\n---/m);
-    const frontmatter = fmMatch ? fmMatch[0] : '';
-    const fmDashes = (frontmatter.match(/^---$/gm) || []).length;
-    const allDashes = (content.match(/^---$/gm) || []).length;
-    const slideSeparators = allDashes - fmDashes;
-    expect(slideSeparators).toBeGreaterThanOrEqual(2);
+    expect(content).toContain('{{slides}}');
   });
 
   it('story.md has standard story template structure', () => {

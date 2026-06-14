@@ -1,4 +1,9 @@
 # Deferred Work
+## Deferred from: code review of story-3.2 (2026-06-14)
+
+- Speaker notes in fenced code blocks extracted — `extractSpeakerNote` has no code-fence awareness; unlikely in pipeline content [`src/formats/slides.js:16-22`]
+- CRLF `\r` in content — `split('\n')` leaves `\r` on lines; pipeline content typically uses LF [`src/formats/slides.js:25`]
+- Silent no-op if template lacks `{{slides}}` — user template without placeholder silently discards deck; user error edge case [`src/formats/slides.js:105`]
 ## Deferred from: code review of story-3.1 (2026-06-14)
 
 - `runPipeline` options silently dropped — pre-existing; `options` param never forwarded to orchestrator; any caller relying on options gets no effect [`src/pipeline/runner.js`]

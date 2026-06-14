@@ -145,7 +145,9 @@ describe('slides format render', () => {
   });
 
   it('outputs to ai-brief-output/slides/{input-name}-slides.md', async () => {
+    const outPath = trackOutput('docs/my-talk.md');
     const result = await render(SAMPLE_CONTENT, { inputFile: 'docs/my-talk.md' });
+    expect(result).toBe(outPath);
     expect(result).toContain('ai-brief-output');
     expect(result).toContain('slides');
     expect(result).toMatch(/my-talk-slides\.md$/);

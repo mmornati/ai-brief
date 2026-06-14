@@ -103,3 +103,15 @@ qwen/qwen3.7-max
 - `pipeline-definition/formats.json` (updated)
 - `test/formats/slides.test.js` (new)
 - `test/pipeline/types.test.js` (updated)
+
+### Review Findings
+
+- [ ] [Review][Patch] Duplicate title slide — template hardcodes `# Title` + `<!-- _class: lead -->` before `{{slides}}`, code generates its own title slide; produces two title slides with `_class: lead` on the wrong one [`src/templates/default/slide.md:7-9`, `src/formats/slides.js:89-98`]
+- [ ] [Review][Patch] Trailing blank slide — template's `---\n<!-- speaker: Closing remarks -->` after `{{slides}}` creates an empty final slide [`src/templates/default/slide.md:15-17`]
+- [ ] [Review][Patch] Speaker note `-->` breaks HTML comment — note text interpolated raw into `<!-- speaker: ${n} -->`; a note containing `-->` produces malformed markup [`src/formats/slides.js:69`]
+- [ ] [Review][Patch] `String.replace` first-only — `replace('{{slides}}', ...)` only substitutes the first occurrence [`src/formats/slides.js:105`]
+- [ ] [Review][Patch] Fragile error-message matching — `includes('not found')` substring check could swallow unrelated errors [`src/formats/slides.js:107`]
+- [ ] [Review][Patch] Test file leak — "outputs to…" test doesn't call `trackOutput`, leaving orphaned file [`test/formats/slides.test.js:147-152`]
+- [x] [Review][Defer] Speaker notes in fenced code blocks extracted — `extractSpeakerNote` has no code-fence awareness; unlikely in pipeline content [`src/formats/slides.js:16-22`] — deferred, pre-existing
+- [x] [Review][Defer] CRLF `\r` in content — `split('\n')` leaves `\r` on lines; pipeline content typically uses LF [`src/formats/slides.js:25`] — deferred, pre-existing
+- [x] [Review][Defer] Silent no-op if template lacks `{{slides}}` — user template without placeholder silently discards deck; user error edge case [`src/formats/slides.js:105`] — deferred, pre-existing
