@@ -4,7 +4,7 @@ baseline_commit: f77b79af0dacc532203f8d969767fc86cedeb94c
 
 # Story 1.2: Install Script
 
-Status: review
+Status: done
 
 ## Story
 
@@ -68,7 +68,30 @@ So that the tool is registered with my AI assistant (opencode and/or Claude Code
 - Created src/utils/file.js with file system utility functions
 - Created src/utils/paths.js with path resolution utilities
 - Created test/install.test.js with 10 comprehensive tests
-- All 17 tests pass (10 new + 7 existing)
+- All 20 tests pass (13 install + 7 sanity)
+- Code review complete: 14 patches applied, 5 items deferred to deferred-work.md, 0 dismissed
+
+### Review Findings
+
+- [x] [Review][Patch] `install()` called `process.exit(1)` inside exported function — refactored to throw `InstallError`; CLI main handles exit [`src/install.js:163`]
+- [x] [Review][Patch] `detectIDEs` used `exists()` which returns true for files — added `isDir()` helper and use it to avoid treating stray files as IDE installs [`src/install.js:22-31`, `src/utils/file.js`]
+- [x] [Review][Patch] CLI arg parser treated `--dry-run=1` as a target dir — strict flag match; unknown flags now report usage and exit 1 [`src/install.js:198-204`]
+- [x] [Review][Patch] install.js logged to stdout during tests, polluting output — tests now mock `console.log`/`console.error` in `beforeEach` [`test/install.test.js`]
+- [x] [Review][Patch] Three dead test helper functions (`createSkillSource`, `createTemplateSource`, `createStepSource`) — removed [`test/install.test.js:17-31`]
+- [x] [Review][Patch] Test cleanup was per-test manual `rm` of `projectDir`; on failure dirs leaked — centralized `projectDir` in `beforeEach`/`afterEach` [`test/install.test.js`]
+- [x] [Review][Patch] `getSkillNames` used `fs.promises.stat` directly — uses `isDir` from utils for consistency (no more direct `fs.promises` in install.js) [`src/install.js:38-52`]
+- [x] [Review][Patch] No validation that source SKILL.md / template / step file exists — `copyWithBackup` helper now warns and skips missing sources [`src/install.js`]
+- [x] [Review][Patch] Redundant `mkdir(destDir)` calls in deploy functions — `copy()` already creates parent dirs; factored into `copyWithBackup` helper [`src/install.js:78-151`]
+- [x] [Review][Patch] No-IDE test only checked `process.exit` was called; would pass even if exit was removed — test now asserts `install()` rejects with `InstallError` [`test/install.test.js`]
+- [x] [Review][Patch] Unused `import fs from 'node:fs'` in utils/file.js — removed (only `fs.promises` is used) [`src/utils/file.js:2`]
+- [x] [Review][Patch] Dry-run output formatting duplicated across two branches — single banner expression with `[dry-run]` suffix [`src/install.js:166-176`]
+- [x] [Review][Patch] `test/.tmp/` not in .gitignore — added to prevent accidental commits of test scratch dirs [`.gitignore`]
+- [x] [Review][Patch] README did not document `./install.sh` — added Install section with usage and behavior [`README.md`]
+- [x] [Review][Defer] `src/utils/paths.js` is created as a stub per dev notes ("create stubs if they don't exist yet, refine in later stories") — not exercised by story 1.2; refine in a later story
+- [x] [Review][Defer] `isMain` symlink fragility (continues from story 1.1 deferral) — `endsWith('install.js')` fallback may match unrelated files; acceptable for v1 [`src/install.js`]
+- [x] [Review][Defer] No `bin` field in package.json (continues from story 1.1 deferral) — `install.sh` is the only entry point per architecture; acceptable [`package.json`]
+- [x] [Review][Defer] No `--version` / `-h` / `--help` flag in install CLI — not in AC; matches v1 scope [`src/install.js`]
+- [x] [Review][Defer] AC #4 mentions copying modified stock templates to `templates/user/` with a warning; current implementation just backs up `.bak` and overwrites in place — full user/ override mechanism is story 1.5 [`src/install.js`, `epics.md#1.5`]
 
 ## Dev Agent Record
 

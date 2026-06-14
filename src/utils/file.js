@@ -1,11 +1,19 @@
 import { promises as fsp } from 'node:fs';
-import fs from 'node:fs';
 import path from 'node:path';
 
 export async function exists(filePath) {
   try {
     await fsp.access(filePath);
     return true;
+  } catch {
+    return false;
+  }
+}
+
+export async function isDir(filePath) {
+  try {
+    const s = await fsp.stat(filePath);
+    return s.isDirectory();
   } catch {
     return false;
   }

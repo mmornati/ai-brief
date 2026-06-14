@@ -1,6 +1,9 @@
 node_modules/
 coverage/
 
+# Test scratch directories
+test/.tmp/
+
 # Runtime output (gitignored per architecture § Project Structure)
 # The ai-brief-output/steps/.gitkeep placeholder is force-tracked to keep
 # the directory present in fresh clones (git cannot re-include a file under

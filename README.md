@@ -4,11 +4,19 @@ AI-powered pipeline for generating structured briefs, stories, and development p
 
 ## Install
 
+To use ai-brief in your project:
+
 ```bash
 git clone https://github.com/mmornati/ai-brief.git
-cd ai-brief
-npm install
+./install.sh                       # install skills into the current project
+./install.sh /path/to/your-project # install skills into a specific project
+./install.sh --dry-run             # preview what would be installed
 ```
+
+`install.sh` auto-detects opencode (`.opencode/`) and Claude Code (`.claude/`)
+in the target project, registers the `ai-brief-*` skills, and copies templates
+and step prompts to `ai-brief/templates/` and `ai-brief/steps/`. Reinstalls
+back up modified files to `.bak` before overwriting.
 
 ## Usage
 

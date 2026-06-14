@@ -1,4 +1,11 @@
 # Deferred Work
+## Deferred from: code review of story-1.2 (2026-06-14)
+
+- `src/utils/paths.js` is a stub created per dev notes ("create stubs if they don't exist yet, refine in later stories") — not exercised by story 1.2; refine in a later story
+- `isMain` symlink fragility (continues from story 1.1 deferral) — `endsWith('install.js')` fallback may match unrelated files; acceptable for v1 [`src/install.js`]
+- No `bin` field in package.json (continues from story 1.1 deferral) — `install.sh` is the only entry point per architecture; acceptable [`package.json`]
+- No `--version` / `-h` / `--help` flag in install CLI — not in AC; matches v1 scope [`src/install.js`]
+- AC #4 mentions copying modified stock templates to `templates/user/` with a warning; current implementation just backs up `.bak` and overwrites in place — full user/ override mechanism is story 1.5 [`src/install.js`, `epics.md#1.5`]
 
 ## Deferred from: code review of story-1.1 (2026-06-14)
 
