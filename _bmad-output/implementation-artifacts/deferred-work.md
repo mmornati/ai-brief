@@ -1,4 +1,10 @@
 # Deferred Work
+## Deferred from: code review of story-3.1 (2026-06-14)
+
+- `runPipeline` options silently dropped — pre-existing; `options` param never forwarded to orchestrator; any caller relying on options gets no effect [`src/pipeline/runner.js`]
+- `ensureHeadings` skips H1-only body — edge case; body with only H1 and no H2/H3 passes without section structure; template adds headings anyway [`src/formats/blog.js:55`]
+- Degenerate filenames from edge-case inputFile — edge case; empty or `.md` inputFile yields `-blog.md`; unlikely in practice [`src/formats/blog.js:67-69`]
+- `String.replace` only replaces first `{{content}}`/`{{frontmatter}}` — template has one of each placeholder; no practical impact [`src/formats/blog.js:83-84`]
 ## Deferred from: code review of story-2.4 (2026-06-14)
 
 - `orchestrate` default export is a no-op stub — pre-existing; `runner.js` calls `loadFormatOrchestrator` which needs the contract placeholder until a future story implements real per-format orchestration. Out of scope for skill-registration story. [`src/formats/opencode.js:57-59`, `src/formats/claude.js:61-63`]

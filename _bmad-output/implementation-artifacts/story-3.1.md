@@ -1,6 +1,6 @@
 # Story 3.1: Blog Output Writer
 
-Status: review
+Status: done
 baseline_commit: 8ae2a141e92118b0efc1951a45f3659cd6e4b287
 
 ## Story
@@ -97,3 +97,20 @@ opencode / minimax/minimax-m3
 ### Change Log
 
 - 2026-06-14: Implemented Story 3.1 — Blog Output Writer. Added `src/formats/blog.js` with frontmatter generation, template resolution (user → default), and output path `ai-brief-output/blog/{input-name}-blog.md`. Wired into runner. 11 new tests, all 213 tests pass.
+
+### Review Findings
+
+- [x] [Review][Decision] Title parsing incomplete per spec — Dev Notes say "Parse title from input file name AND first H1 heading" but code only uses H1 with "Untitled" fallback; filename is never used as a title source [`src/formats/blog.js:6-8`]
+- [x] [Review][Patch] Title YAML injection — `generateFrontmatter` wraps title in double quotes without escaping; titles containing `"` produce invalid YAML [`src/formats/blog.js:37`]
+- [x] [Review][Patch] extractBody strips horizontal rules — `/---[\s\S]*?---\n*/g` matches any paired `---` in the document, silently destroying body content between horizontal rules [`src/formats/blog.js:47`]
+- [x] [Review][Patch] Tags raw YAML injection — tags with YAML-special characters (`:`, `#`, `[`, `]`, `&`, `*`) produce invalid frontmatter [`src/formats/blog.js:33`]
+- [x] [Review][Patch] Template placeholder corruption — body containing `{{frontmatter}}` gets corrupted when `.replace('{{frontmatter}}', frontmatter)` runs after content substitution [`src/formats/blog.js:83-84`]
+- [x] [Review][Patch] Overly broad catch masks template errors — catches all errors from resolveTemplate+readFile, silently falling back; a permissions error or corrupt template degrades output silently [`src/formats/blog.js:79-83`]
+- [x] [Review][Patch] extractTags regex no word boundary — `/^##\s*research/i` matches `## Researching AI`, `## Research-Notes`, etc. [`src/formats/blog.js:16`]
+- [x] [Review][Patch] Duplicate tags not deduplicated — extractTags pushes from both sources with no dedup [`src/formats/blog.js:11-28`]
+- [x] [Review][Patch] Non-string accumulatedContent bypasses guard — truthy non-strings throw unhelpful TypeError instead of descriptive error [`src/formats/blog.js:62`]
+- [x] [Review][Patch] Missing test: catch-block fallback — no test exercises the template resolution failure fallback path [`src/formats/blog.js:82`]
+- [x] [Review][Defer] runPipeline options silently dropped — deferred, pre-existing (options param never forwarded to orchestrator) [`src/pipeline/runner.js`]
+- [x] [Review][Defer] ensureHeadings skips H1-only body — deferred, edge case (template adds headings anyway) [`src/formats/blog.js:55`]
+- [x] [Review][Defer] Degenerate filenames from edge-case inputFile — deferred, edge case (empty or `.md` inputFile yields `-blog.md`) [`src/formats/blog.js:67-69`]
+- [x] [Review][Defer] String.replace only replaces first occurrence — deferred, template has one of each placeholder [`src/formats/blog.js:83-84`]

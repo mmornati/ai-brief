@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest';
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'fs';
+import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'fs';
 import { resolve } from 'path';
 import { render } from '../../src/formats/blog.js';
 import { getProjectRoot } from '../../src/utils/paths.js';
@@ -133,11 +133,19 @@ describe('blog format render', () => {
     await expect(render('', { inputFile: 'empty.md' })).rejects.toThrow(/empty/);
     await expect(render('   ', { inputFile: 'empty.md' })).rejects.toThrow(/empty/);
     await expect(render(null, { inputFile: 'empty.md' })).rejects.toThrow(/empty/);
+    await expect(render(123, { inputFile: 'empty.md' })).rejects.toThrow(/empty/);
   });
 
-  it('uses "Untitled" for content without H1 heading', async () => {
+  it('derives title from filename when no H1 heading exists', async () => {
     const outPath = trackOutput('no-h1.md');
     await render(SAMPLE_CONTENT_NO_H1, { inputFile: 'no-h1.md' });
+    const output = readFileSync(outPath, 'utf-8');
+    expect(output).toContain('title: "No H1"');
+  });
+
+  it('falls back to Untitled when no H1 and no inputFile', async () => {
+    const outPath = trackOutput('post.md');
+    await render(SAMPLE_CONTENT_NO_H1, {});
     const output = readFileSync(outPath, 'utf-8');
     expect(output).toContain('title: "Untitled"');
   });
@@ -170,5 +178,21 @@ describe('blog format render', () => {
     const yaml = frontmatter[1];
     expect(yaml).toMatch(/tech/);
     expect(yaml).toMatch(/devtools/);
+  });
+
+  it('falls back to plain output when template is not found', async () => {
+    const tempBackup = defaultTemplatePath + '.test-bak';
+    renameSync(defaultTemplatePath, tempBackup);
+    try {
+      const outPath = trackOutput('fallback.md');
+      const result = await render(SAMPLE_CONTENT, { inputFile: 'fallback.md' });
+      expect(result).toContain('fallback-blog.md');
+      const output = readFileSync(result, 'utf-8');
+      expect(output).toMatch(/^---\n/);
+      expect(output).toContain('title: "My Blog Post"');
+      expect(output).not.toContain('## Introduction');
+    } finally {
+      renameSync(tempBackup, defaultTemplatePath);
+    }
   });
 });

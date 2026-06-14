@@ -3,38 +3,47 @@ import { getProjectRoot } from '../utils/paths.js';
 import { resolveTemplate } from '../templates/resolver.js';
 import { readFile, writeFile, mkdir } from '../utils/file.js';
 
-function parseTitle(content) {
+function parseTitle(content, inputFile) {
   const match = content.match(/^# (.+)/m);
-  return match ? match[1].trim() : 'Untitled';
+  if (match) return match[1].trim();
+  if (inputFile) {
+    const base = path.basename(inputFile, path.extname(inputFile));
+    if (base) return base.replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+  }
+  return 'Untitled';
 }
 
 function extractTags(content) {
   const lines = content.split('\n');
-  const tags = [];
+  const tagSet = new Set();
   let inResearch = false;
   for (const line of lines) {
-    if (/^##\s*research/i.test(line)) inResearch = true;
-    else if (/^##\s/.test(line) && !/^##\s*research/i.test(line)) inResearch = false;
+    if (/^##\s+research\b/i.test(line)) inResearch = true;
+    else if (/^##\s/.test(line) && !/^##\s+research\b/i.test(line)) inResearch = false;
     if (inResearch) {
       const match = line.match(/tags:\s*\[([^\]]+)\]/i);
       if (match) {
-        tags.push(...match[1].split(',').map(t => t.trim()).filter(Boolean));
+        match[1].split(',').map(t => t.trim()).filter(Boolean).forEach(t => tagSet.add(t));
       }
       const bullet = line.match(/^-\s*`([^`]+)`/);
-      if (bullet) tags.push(bullet[1]);
+      if (bullet) tagSet.add(bullet[1]);
     }
   }
-  return tags;
+  return [...tagSet];
+}
+
+function escapeYamlString(s) {
+  return s.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
 }
 
 function generateFrontmatter(title, tags) {
   const today = new Date().toISOString().split('T')[0];
   const tagsYaml = tags.length > 0
-    ? `  - ${tags.join('\n  - ')}`
+    ? tags.map(t => `  - "${escapeYamlString(t)}"`).join('\n')
     : '[]';
   return [
     '---',
-    `title: "${title}"`,
+    `title: "${escapeYamlString(title)}"`,
     `date: ${today}`,
     'tags:',
     tagsYaml,
@@ -44,7 +53,7 @@ function generateFrontmatter(title, tags) {
 }
 
 function extractBody(content) {
-  return content.replace(/---[\s\S]*?---\n*/g, '').trim();
+  return content.replace(/^---[\s\S]*?---\n*/, '').trim();
 }
 
 function ensureHeadings(body) {
@@ -59,7 +68,7 @@ function ensureHeadings(body) {
 }
 
 export async function render(accumulatedContent, metadata = {}) {
-  if (!accumulatedContent || accumulatedContent.trim().length === 0) {
+  if (typeof accumulatedContent !== 'string' || accumulatedContent.trim().length === 0) {
     throw new Error('Cannot generate blog post: accumulated content is empty');
   }
 
@@ -68,7 +77,7 @@ export async function render(accumulatedContent, metadata = {}) {
     ? path.basename(metadata.inputFile, path.extname(metadata.inputFile))
     : 'post';
 
-  const title = parseTitle(accumulatedContent);
+  const title = parseTitle(accumulatedContent, metadata.inputFile);
   const tags = extractTags(accumulatedContent);
   const frontmatter = generateFrontmatter(title, tags);
 
@@ -80,9 +89,10 @@ export async function render(accumulatedContent, metadata = {}) {
     const templatePath = await resolveTemplate('blog.md');
     const templateContent = await readFile(templatePath);
     output = templateContent
-      .replace('{{content}}', body)
-      .replace('{{frontmatter}}', frontmatter);
-  } catch {
+      .replace('{{frontmatter}}', frontmatter)
+      .replace('{{content}}', body);
+  } catch (err) {
+    if (!err.message.includes('not found')) throw err;
     output = frontmatter + '\n\n' + body;
   }
 
