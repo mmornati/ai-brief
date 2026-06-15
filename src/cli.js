@@ -16,6 +16,7 @@ function parseArgs(args) {
   let inputFile = null;
   let format = null;
   let provider = 'passthrough';
+  let reviewFile = null;
 
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
@@ -43,12 +44,18 @@ function parseArgs(args) {
         throw new Error('--provider requires a value');
       }
       provider = value;
+    } else if (arg === '--review-file') {
+      const next = args[++i];
+      if (next === undefined) {
+        throw new Error('--review-file requires a path');
+      }
+      reviewFile = next;
     } else if (!arg.startsWith('--') && !arg.startsWith('-') && inputFile === null) {
       inputFile = arg;
     }
   }
 
-  return { inputFile, format, provider };
+  return { inputFile, format, provider, reviewFile };
 }
 
 function formatStatusLine(idx, step) {
@@ -230,17 +237,32 @@ export const commands = {
       const projectRoot = getProjectRoot();
       const base = path.basename(parsed.inputFile, path.extname(parsed.inputFile));
       const blogPath = path.resolve(projectRoot, 'ai-brief-output', 'steps', '05-format.md');
-      const reviewPath = path.resolve(projectRoot, 'ai-brief-output', `${base}-review.md`);
+      const defaultReviewPath = path.resolve(projectRoot, 'ai-brief-output', `${base}-review.md`);
+      const reviewPath = parsed.reviewFile || defaultReviewPath;
 
       let blogContent;
-      let reviewContent;
       try {
         blogContent = await readFile(blogPath);
-        reviewContent = await readFile(reviewPath);
       } catch {
-        console.error('No pipeline output found. Run the pipeline first:\n  ai-brief run <input-file> --format <format> --provider openai-compatible');
+        console.error('No pipeline output found at ' + blogPath + '\nRun the pipeline first:\n  ai-brief run <input-file> --format <format> --provider openai-compatible');
         process.exit(1);
       }
+
+      let reviewContent;
+      try {
+        reviewContent = await readFile(reviewPath);
+      } catch {
+        const isDefault = reviewPath === defaultReviewPath;
+        const hint = isDefault
+          ? `\n\nThe auto-generated review was not found at:\n  ${defaultReviewPath}\nMake sure the pipeline has been run, or provide a custom review file:\n  --review-file /path/to/your-review.md`
+          : `\nReview file not found: ${reviewPath}`;
+        console.error(hint);
+        process.exit(1);
+      }
+
+      const isCustomReview = parsed.reviewFile !== null;
+      console.log(`Revising blog post with ${isCustomReview ? 'your custom review' : 'the auto-generated review'}...\n`);
+      console.log('  You can edit the review file before running revise, or provide your own:\n  --review-file /path/to/your-feedback.md\n');
 
       let executePrompt;
       try {
@@ -254,8 +276,6 @@ export const commands = {
         console.error('--provider openai-compatible is required for revise');
         process.exit(1);
       }
-
-      console.log('Revising blog post with review feedback...');
       const prompt = [
         'You are revising a blog post to address feedback from an expert review.',
         '',
@@ -314,7 +334,14 @@ function printHelp() {
   console.log('  ai-brief status docs/idea.md');
   console.log('  ai-brief status docs/idea.md --format blog');
   console.log('  ai-brief resume docs/idea.md --format blog');
+  console.log('');
+  console.log('Revise command options:');
+  console.log('  --format <format>      Output format (blog|slides)');
+  console.log('  --provider <provider>  AI provider (default: passthrough)');
+  console.log('  --review-file <path>   Custom review/feedback file (optional)');
+  console.log('');
   console.log('  ai-brief revise docs/idea.md --format blog --provider openai-compatible');
+  console.log('  ai-brief revise docs/idea.md --format blog --provider openai-compatible --review-file ./my-feedback.md');
 }
 
 const isMain = process.argv[1] === fileURLToPath(import.meta.url);

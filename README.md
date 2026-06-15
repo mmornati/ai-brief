@@ -49,19 +49,21 @@ flowchart LR
 git clone https://github.com/mmornati/ai-brief.git
 cd ai-brief
 
-# Configure an AI provider (optional — passthrough mode works without this)
+# 1. Configure an AI provider
 cp .env.example .env
 # Edit .env with your API key, base URL, and model
 
-# Run the pipeline on a markdown file
-node src/cli.js run my-idea.md --format blog                     # passthrough (no AI)
-node src/cli.js run my-idea.md --format blog --provider openai-compatible  # AI generation
+# 2. Run the pipeline — produces a blog post + separate review report
+node src/cli.js run my-idea.md --format blog --provider openai-compatible
 
-# Check pipeline status
-node src/cli.js status my-idea.md
+# 3. (Optional) Edit the auto-generated review to add your own comments
+#    vim ai-brief-output/my-idea-review.md
 
-# Resume from the last completed step
-node src/cli.js resume my-idea.md --format blog
+# 4. Revise the blog post incorporating review feedback
+node src/cli.js revise my-idea.md --format blog --provider openai-compatible
+
+# 5. Your final revised blog post is at:
+#    ai-brief-output/blog/my-idea-blog.md
 ```
 
 ## 🔧 Installation into a Project
@@ -113,6 +115,7 @@ Commands:
   run       Execute the full pipeline on a markdown input file
   status    Show current pipeline status
   resume    Resume a paused pipeline from the last completed step
+  revise    Revise the blog post incorporating review feedback
 
 Run command options:
   --format <format>     Output format (blog|slides)
@@ -140,6 +143,12 @@ Examples:
   # Check status and resume
   ai-brief status docs/idea.md
   ai-brief resume docs/idea.md --format blog
+
+  # Revise blog post with review feedback
+  ai-brief revise docs/idea.md --format blog --provider openai-compatible
+
+  # Revise with custom feedback file
+  ai-brief revise docs/idea.md --format blog --provider openai-compatible --review-file ./my-feedback.md
 ```
 
 ## 🧪 Development

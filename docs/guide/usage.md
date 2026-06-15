@@ -103,6 +103,49 @@ This is useful when a step fails (e.g., due to context limits) or when you want 
 
 ---
 
+---
+
+### `revise`
+
+Revise the final blog post by incorporating review feedback. Reads the format step output (`05-format.md`) and a review file, then calls the AI to address every issue.
+
+```bash
+node src/cli.js revise <input-file> --format <format> --provider <provider> [--review-file <path>]
+```
+
+**Options:**
+- `--format <format>` — Output format (`blog` or `slides`). **Required.**
+- `--provider <provider>` — AI provider (`openai-compatible`). **Required.**
+- `--review-file <path>` — Custom review/feedback file (optional). Defaults to `ai-brief-output/{input-name}-review.md`.
+
+**How it works:**
+
+1. Reads the format step output (the blog post) from `ai-brief-output/steps/05-format.md`
+2. Reads the review file — either the auto-generated review from the pipeline, or a custom file via `--review-file`
+3. Calls the AI with a prompt: "Address every issue raised in the review feedback. Output ONLY the revised blog post."
+4. Saves the revised output through the blog writer
+
+**Review sources:**
+
+You can get feedback from three sources:
+
+| Source | How |
+|--------|-----|
+| **Auto-generated review** from pipeline | Run `revise` without `--review-file` — it uses the review from step 6 |
+| **Edited auto-review** | Edit `ai-brief-output/{input-name}-review.md`, then run `revise` |
+| **Your own feedback file** | Write your own markdown file and pass `--review-file /path/to/feedback.md` |
+
+**Examples:**
+```bash
+# Revise using the auto-generated review from the pipeline
+node src/cli.js revise docs/idea.md --format blog --provider openai-compatible
+
+# Revise with custom feedback
+node src/cli.js revise docs/idea.md --format slides --provider openai-compatible --review-file ./my-feedback.md
+```
+
+---
+
 ### `init`
 
 Scaffold a new project in the target directory.
