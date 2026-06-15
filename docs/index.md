@@ -20,7 +20,7 @@ hero:
 features:
   - icon: 🧠
     title: AI-Native Pipeline
-    details: Six structured steps (validate → research → structure → write → format → review) with accumulated context. No API keys, no SaaS.
+    details: Six structured steps (validate → research → structure → write → format → review) with accumulated context. Passthrough mode for testing or OpenAI-compatible providers for real AI generation.
   - icon: 📝
     title: Multi-Format Output
     details: Generate blog posts with YAML frontmatter or Marp-compatible slide decks with speaker notes.

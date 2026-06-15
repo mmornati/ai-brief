@@ -55,7 +55,7 @@ node src/cli.js run docs/idea.md --format blog --provider openai-compatible
 node src/cli.js run docs/talk-notes.md --format slides --provider openai-compatible
 ```
 
-The pipeline runs all six steps sequentially. Each step writes intermediate output to `ai-brief-output/steps/`. The final artifact is written to `ai-brief-output/{format}/{input-name}-{format}.md`. When the pipeline completes, the output path is printed to the console.
+The pipeline runs all six steps sequentially. Each step writes intermediate output to `ai-brief-output/steps/`. The final artifact is written to `ai-brief-output/{format}/{input-name}-{format}.md`. The review step's output is saved as a separate sidecar file at `ai-brief-output/{input-name}-review.md`. When the pipeline completes, the output path is printed to the console.
 
 ---
 
@@ -96,6 +96,8 @@ node src/cli.js resume <input-file> --format <format>
 
 **Options:**
 - `--format <format>` — Output format (`blog` or `slides`). **Required.**
+
+The `--provider` flag is not needed for `resume` — the provider is only relevant for the initial `run` command. Resuming re-uses the same pipeline logic from the last checkpoint.
 
 This is useful when a step fails (e.g., due to context limits) or when you want to restart execution after inspecting intermediate outputs.
 

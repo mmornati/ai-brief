@@ -73,7 +73,14 @@ export async function runPipeline(inputFile, format, options = {}) {
       await writeFile(markerPath(i, 'completed'), '');
       try { await fsUnlink(markerPath(i, 'failed')); } catch { }
 
-      accumulatedContent = result;
+      const shouldAccumulate = step.accumulate !== false;
+      if (shouldAccumulate) {
+        accumulatedContent = result;
+      } else {
+        const sidecarDir = path.resolve(projectRoot, 'ai-brief-output');
+        const sidecarFile = path.basename(inputFile, path.extname(inputFile)) + '-review.md';
+        await writeFile(path.resolve(sidecarDir, sidecarFile), result);
+      }
     } catch (err) {
       const errorMsg = `Step "${step.name}" failed: ${err.message}`;
       console.error(errorMsg);

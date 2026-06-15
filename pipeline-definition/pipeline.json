@@ -28,7 +28,8 @@
     {
       "name": "review",
       "promptFile": "steps/review.md",
-      "description": "Review and polish"
+      "description": "Review and polish",
+      "accumulate": false
     }
   ]
 }

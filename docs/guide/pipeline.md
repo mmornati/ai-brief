@@ -1,6 +1,6 @@
 # Pipeline Architecture
 
-The AI Brief pipeline transforms raw markdown input into polished output through six sequential steps. Each step is a self-contained AI invocation that carries forward accumulated context.
+The AI Brief pipeline transforms raw markdown input into polished output through six sequential steps. Each step reads the accumulated output from all previous steps as context for its prompt.
 
 ## Execution Flow
 
@@ -140,7 +140,7 @@ The runner is the core execution engine:
 The `executePrompt` function is pluggable:
 
 - **`passthrough`** (default) — echoes the prompt as output. Useful for testing pipeline mechanics without an AI connection.
-- **`openai-compatible`** — calls an OpenAI-compatible API (including OpenAI, Ollama, LocalAI, etc.) to generate real content.
+- **`openai-compatible`** — calls an OpenAI-compatible API (including OpenAI, Ollama, LocalAI, OpenRouter, etc.) to generate real content.
 
 Configure the provider via the `--provider` CLI flag:
 
@@ -148,12 +148,18 @@ Configure the provider via the `--provider` CLI flag:
 node src/cli.js run my-idea.md --format blog --provider openai-compatible
 ```
 
-Environment variables control the provider:
+Environment variables control the provider. They can be set in a `.env` file (copied from `.env.example`) or as shell exports:
 
-| Variable | Purpose |
-|----------|---------|
-| `AI_API_KEY` | API key (required for `openai-compatible`) |
-| `AI_BASE_URL` | API base URL (default: `https://api.openai.com/v1`) |
-| `AI_MODEL` | Model name (default: `gpt-4o-mini`) |
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `AI_API_KEY` | Yes | — | API key for the AI provider |
+| `AI_BASE_URL` | No | `https://api.openai.com/v1` | Base URL for OpenAI-compatible API |
+| `AI_MODEL` | No | `gpt-4o-mini` | Model to use for generation |
+
+### Non-accumulating Steps
+
+Steps with `"accumulate": false` (e.g., the `review` step) do not replace the accumulated context. Their output is saved as a sidecar file (`{input-name}-review.md`) in `ai-brief-output/`. The final artifact is generated from the format step's output instead. The pipeline definition at `pipeline-definition/pipeline.json` controls this behavior.
+
+### Extending Providers
 
 The provider architecture lives in `src/ai/` and can be extended by adding new provider modules to `src/ai/providers/` and registering them in `src/ai/provider.js`.

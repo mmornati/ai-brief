@@ -1,45 +1,25 @@
 # Format
 
-You are applying a template format to the composed content.
+You are formatting the composed content into the final target format.
 
 ## Instructions
 
 1. Read the accumulated context from `{input-file}`
-2. Identify the target format (blog or slides)
-3. Apply the appropriate template structure
-4. Ensure frontmatter, sections, and formatting match the target format
-5. Output the formatted content as markdown
-6. Include the accumulated content from previous steps below
+2. Produce ONLY the final artifact in the target format — no commentary, no wrapper, no code fences
+3. The entire output will be used directly as the published content
 
 ## Formats
 
 ### Blog
-- Add YAML frontmatter with title, date, tags
-- Structure with Markdown headings
-- Include intro, body, conclusion sections
+- Start with YAML frontmatter: title, date, tags
+- Use a single `#` H1 heading as the article title (not inside frontmatter)
+- Then use `##` for section headings
+- Full markdown with paragraphs, lists, code blocks
+- Complete article ready to publish
 
 ### Slides
 - Use `---` slide separators
 - Add speaker notes with `<!-- speaker: text -->`
 - Apply Marp-compatible classes
 
-## Output Format
-
-```markdown
-# Formatted Output
-
-## Target Format
-blog | slides
-
-## Formatted Content
-
-<the final artifact, ready to publish or render>
-
-## Accumulated Context
-
-<previous-step output, preserved for traceability>
-```
-
----
-
-*Accumulated content follows below:*
+**Output only the formatted artifact — nothing else.**

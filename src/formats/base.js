@@ -15,8 +15,10 @@ export class FormatWriter {
 
   parseTitle(content, inputFile) {
     if (typeof content !== 'string') return 'Untitled';
-    const match = content.match(/^# (.+)/m);
-    if (match) return match[1].trim();
+    const h1Match = content.match(/^# (.+)/m);
+    if (h1Match) return h1Match[1].trim();
+    const fmMatch = content.match(/^---\n[\s\S]*?\ntitle:\s*"?([^"\n]+)"?/);
+    if (fmMatch) return fmMatch[1].trim();
     if (inputFile) {
       const base = path.basename(inputFile, path.extname(inputFile));
       if (base) return base.replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());

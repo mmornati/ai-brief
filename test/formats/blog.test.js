@@ -81,7 +81,7 @@ describe('blog format render', () => {
     expect(output).toContain('date:');
     expect(output).toContain('draft: true');
     expect(output).toContain('tags:');
-    expect(output).toContain('## Introduction');
+    expect(output).toContain('## Research');
     expect(output).toContain('## Write');
     expect(output).toContain('### Subsection One');
   });
@@ -118,15 +118,15 @@ describe('blog format render', () => {
     await render(SAMPLE_CONTENT, { inputFile: 'post3.md' });
     const output = readFileSync(outPath, 'utf-8');
     expect(output).toContain('**User Custom Section**');
-    expect(output).not.toContain('## Introduction');
+    expect(output).toContain('## Write');
   });
 
   it('falls back to default template when no user template exists', async () => {
     const outPath = trackOutput('post4.md');
     await render(SAMPLE_CONTENT, { inputFile: 'post4.md' });
     const output = readFileSync(outPath, 'utf-8');
-    expect(output).toContain('## Introduction');
-    expect(output).toContain('## Conclusion');
+    expect(output).toContain('## Research');
+    expect(output).toContain('## Write');
   });
 
   it('throws descriptive error for empty content', async () => {

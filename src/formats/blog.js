@@ -1,6 +1,30 @@
 import { FormatWriter } from './base.js';
 
+function parseFrontmatter(content) {
+  const match = content.match(/^---\n([\s\S]*?)\n---/);
+  if (!match) return {};
+  const frontmatter = {};
+  for (const line of match[1].split('\n')) {
+    const eqIdx = line.indexOf(':');
+    if (eqIdx === -1) continue;
+    const key = line.slice(0, eqIdx).trim();
+    let value = line.slice(eqIdx + 1).trim();
+    if (key === 'tags') {
+      const tagMatch = value.match(/^\[([^\]]*)\]$/);
+      if (tagMatch) {
+        frontmatter.tags = tagMatch[1].split(',').map(t => t.trim().replace(/^["']|["']$/g, '')).filter(Boolean);
+      }
+    } else if (key === 'title') {
+      frontmatter.title = value.replace(/^["']|["']$/g, '');
+    }
+  }
+  return frontmatter;
+}
+
 function extractTags(content) {
+  const fm = parseFrontmatter(content);
+  if (fm.tags && fm.tags.length > 0) return fm.tags;
+
   const lines = content.split('\n');
   const tagSet = new Set();
   let inResearch = false;

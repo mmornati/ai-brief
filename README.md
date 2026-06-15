@@ -34,7 +34,7 @@ flowchart LR
 
 ## ✨ Features
 
-- **🧠 AI-native pipeline** — each step is a fresh AI invocation with accumulated context; no API keys, no SaaS, no setup
+- **🧠 AI-native pipeline** — six structured steps with accumulated context; supports passthrough (no AI) for testing or OpenAI-compatible providers for real content generation
 - **📝 Multi-format output** — generate blog posts (with YAML frontmatter) or Marp-compatible slide decks
 - **🛠️ Fully customizable** — every step prompt and output template is a plain markdown file you can edit
 - **🔄 Resumable** — pipeline state is saved per-step; pick up where you left off with `resume`
@@ -49,8 +49,13 @@ flowchart LR
 git clone https://github.com/mmornati/ai-brief.git
 cd ai-brief
 
+# Configure an AI provider (optional — passthrough mode works without this)
+cp .env.example .env
+# Edit .env with your API key, base URL, and model
+
 # Run the pipeline on a markdown file
-node src/cli.js run my-idea.md --format blog
+node src/cli.js run my-idea.md --format blog                     # passthrough (no AI)
+node src/cli.js run my-idea.md --format blog --provider openai-compatible  # AI generation
 
 # Check pipeline status
 node src/cli.js status my-idea.md
@@ -110,11 +115,29 @@ Commands:
   resume    Resume a paused pipeline from the last completed step
 
 Run command options:
-  --format <format>   Output format (blog|slides)
+  --format <format>     Output format (blog|slides)
+  --provider <provider> AI provider (passthrough|openai-compatible, default: passthrough)
+
+AI provider environment variables (for --provider openai-compatible):
+  These can be set in a .env file (see .env.example) or as shell exports.
+
+  AI_API_KEY    API key (required)
+  AI_BASE_URL   API base URL (default: https://api.openai.com/v1)
+  AI_MODEL      Model name (default: gpt-4o-mini)
 
 Examples:
+  # Passthrough (no AI, for testing pipeline mechanics)
   ai-brief run docs/idea.md --format blog
-  ai-brief run docs/idea.md --format slides
+
+  # With AI generation (OpenAI)
+  ai-brief run docs/idea.md --format blog --provider openai-compatible
+
+  # With local model via Ollama
+  export AI_BASE_URL=http://localhost:11434/v1
+  export AI_MODEL=llama3
+  ai-brief run docs/idea.md --format slides --provider openai-compatible
+
+  # Check status and resume
   ai-brief status docs/idea.md
   ai-brief resume docs/idea.md --format blog
 ```
@@ -151,6 +174,10 @@ ai-brief/
 ├── src/
 │   ├── cli.js                 # CLI entry point
 │   ├── install.js             # Install script logic
+│   ├── ai/
+│   │   ├── provider.js         # Provider factory
+│   │   └── providers/
+│   │       └── openai-compatible.js  # OpenAI-compatible API client
 │   ├── pipeline/
 │   │   ├── runner.js          # Sequential step execution
 │   │   ├── step-loader.js     # Loads pipeline/format definitions

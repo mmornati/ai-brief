@@ -1,7 +1,7 @@
 /**
  * @typedef {{ content: string, metadata: Record<string, unknown>, state: PipelineState }} StepIO
  * @typedef {{ stepIndex: number, completedSteps: string[], currentStep: string|null, failedStep: string|null }} PipelineState
- * @typedef {{ name: string, promptFile: string, description: string }} StepDefinition
+ * @typedef {{ name: string, promptFile: string, description: string, accumulate?: boolean }} StepDefinition
  * @typedef {{ name: string, orchestrator: string }} FormatDefinition
  */
 
