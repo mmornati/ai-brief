@@ -64,8 +64,11 @@ export async function runPipeline(inputFile, format, options = {}) {
     try {
       const promptText = await loadPrompt(step.promptFile, projectRoot);
       const fullPrompt = promptText + '\n\n' + accumulatedContent;
+      console.log(`\n--- Step ${i + 1}/${steps.length}: ${step.name} ---`);
       const result = await executeFn(fullPrompt);
 
+      const preview = result.slice(0, 500).replace(/\n/g, '\n  ');
+      console.log(`  ${preview}${result.length > 500 ? '\n  ...' : ''}`);
       await writeFile(outputPath(i, step.name), result);
       await writeFile(markerPath(i, 'completed'), '');
       try { await fsUnlink(markerPath(i, 'failed')); } catch { }
@@ -82,5 +85,5 @@ export async function runPipeline(inputFile, format, options = {}) {
   }
 
   const orchestrator = await loadFormatOrchestrator(formatDef, projectRoot);
-  await orchestrator(accumulatedContent, { inputFile, format });
+  return orchestrator(accumulatedContent, { inputFile, format });
 }

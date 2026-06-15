@@ -407,3 +407,174 @@ So that adding new output formats in the future is straightforward.
 **Given** the base resolver looks up a template
 **When** both `default/` and `user/` directories exist
 **Then** it checks `templates/user/<format>/` first, then `templates/default/<format>/`
+
+---
+
+## Epic 4: Linked Services Publishing
+
+Service connector system, Google Slides publisher, Hashnode publisher, and CLI integration for publishing pipeline output to external services.
+
+### FR Coverage Map
+
+| FR | Epic | Description |
+|---|---|---|
+| FR-NEW | Epic 4 | Publish formatted output to external services (Google Slides, Hashnode) |
+| FR-NEW | Epic 4 | Service configuration via config file and CLI flags |
+| FR-NEW | Epic 4 | Credential management outside the repo |
+
+### Story 4.1: Service Configuration & Loader
+
+As a developer,
+I want a service configuration file and loader,
+So that service bindings (name → format → connector) are defined in one place and loadable by the pipeline runner.
+
+**Acceptance Criteria:**
+
+**Given** `pipeline-definition/services.json` exists with valid service definitions
+**When** `loader.js` reads the file
+**Then** it returns an array of service objects with `name`, `format`, `connector`, `config`, and `default`
+
+**Given** a service has `"default": true` for the `slides` format
+**When** the pipeline runs with `--format slides` and no `--publish` flag
+**Then** the default slides service is used automatically
+
+**Given** a service config value is `"env:VAR_NAME"`
+**When** the loader resolves the config
+**Then** it reads the value from environment variable `VAR_NAME`
+**And** throws a descriptive error if the env var is not set
+
+**Given** a service config value is an absolute file path like `~/.config/ai-brief/creds.json`
+**When** the loader resolves the config
+**Then** it expands `~` to the user's home directory
+**And** throws a descriptive error if the file does not exist
+
+**Given** `services.json` is missing
+**When** the loader attempts to read it
+**Then** it returns an empty array (publishing is optional, no crash)
+
+**Given** `services.json` has two services for the same format
+**When** both have `"default": true`
+**Then** the loader logs a warning and uses the first one
+
+### Story 4.2: ServicePublisher Base Class
+
+As a developer,
+I want a base class for all service connectors,
+So that new services can be added without changing the pipeline runner.
+
+**Acceptance Criteria:**
+
+**Given** `src/services/base.js` exists
+**When** a new service connector extends `ServicePublisher`
+**Then** it must implement `publish(localFilePath, content, metadata)` and `validateConfig()`
+
+**Given** a service connector is instantiated
+**When** `validateConfig()` is called
+**Then** it checks that all required config keys are present and valid
+**And** returns `{ valid: boolean, errors: string[] }`
+
+**Given** a service connector's config is invalid
+**When** `publish()` is called
+**Then** it throws a descriptive error before any network call
+
+**Given** the base class is instantiated directly (not extended)
+**When** `new ServicePublisher()` is called
+**Then** it throws an error (abstract base class)
+
+### Story 4.3: Google Slides Connector
+
+As a user,
+I want to publish slide decks to an existing Google Slides presentation,
+So that my content appears in Google Slides without manual copy-paste.
+
+**Acceptance Criteria:**
+
+**Given** the pipeline produces a slide deck (`--format slides`)
+**When** I run with `--publish google-slides`
+**Then** the connector:
+- Authenticates via Google service account credentials from config
+- Reads the existing presentation by ID from config
+- Clears all existing slides
+- Creates a title slide with the deck title
+- Creates one slide per `##` heading in the Marp output
+- Adds text content to each slide as text boxes
+- Sets speaker notes from `<!-- speaker: -->` comments onto the corresponding slide
+- Outputs a success message with the presentation URL
+
+**Given** the config has `"presentationId": "env:GOOGLE_SLIDES_PRESENTATION_ID"`
+**When** the connector runs
+**Then** it reads the presentation ID from the environment variable
+**And** throws a clear error if it's not set
+
+**Given** the credentials file (`~/.config/ai-brief/google-credentials.json`) does not exist
+**When** the connector runs
+**Then** it throws a descriptive error with instructions to create a service account and download the key
+
+**Given** the presentation ID is invalid or access is denied
+**When** the connector attempts to update
+**Then** it throws a descriptive error with the HTTP status and response body
+
+### Story 4.4: Hashnode Connector
+
+As a user,
+I want to publish blog posts to Hashnode as drafts,
+So that I can review and publish from the Hashnode dashboard.
+
+**Acceptance Criteria:**
+
+**Given** the pipeline produces a blog post (`--format blog`)
+**When** I run with `--publish hashnode`
+**Then** the connector:
+- Authenticates via Hashnode PAT from config (env var)
+- Parses YAML frontmatter for `title` and `tags`
+- Creates a draft post on the configured publication via Hashnode GraphQL API
+- Outputs a success message with the draft URL
+
+**Given** the blog has frontmatter with title and tags
+**When** the connector creates the draft
+**Then** the title is set from frontmatter `title`
+**And** tags are set from frontmatter `tags`
+**And** the body is the markdown content (frontmatter stripped)
+**And** the post is created as a draft (not published)
+
+**Given** `HASHNODE_API_KEY` env var is not set
+**When** the connector runs
+**Then** it throws a descriptive error with instructions to create a Hashnode PAT
+
+**Given** the API returns an error response
+**When** the connector receives it
+**Then** it throws a descriptive error with the API error details
+
+### Story 4.5: CLI & Runner Integration
+
+As a user,
+I want to publish pipeline output by adding a `--publish` flag to the `run` command,
+So that I control when publishing happens without extra configuration steps.
+
+**Acceptance Criteria:**
+
+**Given** I run `ai-brief run docs/idea.md --format slides --publish google-slides`
+**When** the pipeline completes successfully
+**Then** the slide deck is written to the local file (as always)
+**And** the Google Slides connector is invoked
+**And** a success message is printed with the presentation URL
+
+**Given** I run `ai-brief run docs/idea.md --format slides` (no `--publish` flag)
+**When** the pipeline completes successfully
+**Then** the slide deck is written to the local file
+**And** no service connector is invoked (current behavior preserved)
+
+**Given** I run `ai-brief run docs/idea.md --format slides --publish unknown`
+**When** the pipeline completes
+**Then** an error is printed: `Unknown service "unknown". Available services: google-slides, hashnode`
+**And** the local file is still written
+
+**Given** I run `ai-brief run docs/idea.md --format blog --publish hashnode`
+**When** the connector fails (e.g., network error)
+**Then** the local file is still written successfully
+**And** an error message is printed but the pipeline exit code is not affected by publish failure
+
+**Given** a default service is configured for the `slides` format in `services.json`
+**When** I run `ai-brief run docs/idea.md --format slides` (no `--publish`)
+**Then** the default service is used automatically
+**And** the slide deck is published to Google Slides

@@ -6,6 +6,7 @@ This guide walks you through your first AI Brief pipeline run — from raw idea 
 
 - **Node.js** >= 18
 - A markdown file with your raw ideas (e.g., `my-idea.md`)
+- **(Optional)** An API key for an AI provider to generate real content
 
 ## 1. Clone the Repository
 
@@ -14,7 +15,48 @@ git clone https://github.com/mmornati/ai-brief.git
 cd ai-brief
 ```
 
-## 2. Create an Input File
+## 2. Configure an AI Provider
+
+The pipeline needs an AI to generate content. Set up an OpenAI-compatible provider:
+
+**Option A: `.env` file (recommended)**
+
+Copy the example file and fill in your values:
+
+```bash
+cp .env.example .env
+```
+
+Edit `.env`:
+```bash
+AI_API_KEY=sk-your-api-key-here
+AI_BASE_URL=https://api.openai.com/v1
+AI_MODEL=gpt-4o-mini
+```
+
+The `.env` file is automatically loaded when running any CLI command.
+
+**Option B: Environment variables**
+
+```bash
+# Required: your API key
+export AI_API_KEY=your-api-key-here
+
+# Optional: custom endpoint (default: https://api.openai.com/v1)
+# For local models via Ollama: export AI_BASE_URL=http://localhost:11434/v1
+export AI_BASE_URL=https://api.openai.com/v1
+
+# Optional: model selection (default: gpt-4o-mini)
+export AI_MODEL=gpt-4o-mini
+```
+
+Supported providers (pass via `--provider`):
+| Provider | Description |
+|----------|-------------|
+| `passthrough` | Echoes prompts as output (no AI, for testing) |
+| `openai-compatible` | OpenAI API or any compatible endpoint |
+
+## 3. Create an Input File
 
 Create a markdown file with your content idea. This can be as rough as bullet points or free-form notes:
 
@@ -32,15 +74,19 @@ Target audience: Senior developers and tech leads
 Tone: Professional but approachable
 ```
 
-## 3. Run the Pipeline
+## 4. Run the Pipeline
 
 ```bash
+# Passthrough mode (no AI, for testing the pipeline mechanics):
 node src/cli.js run my-idea.md --format blog
+
+# With AI generation:
+node src/cli.js run my-idea.md --format blog --provider openai-compatible
 ```
 
-The pipeline executes six steps sequentially. Each step writes its output to `ai-brief-output/steps/`.
+The pipeline executes six steps sequentially. Each step writes its output to `ai-brief-output/steps/`. When complete, the final output path is printed. With `--provider openai-compatible`, each step calls the AI for validation, research, structuring, writing, formatting, and review.
 
-## 4. View the Result
+## 5. View the Result
 
 After the pipeline completes, your blog post is at:
 
@@ -48,7 +94,7 @@ After the pipeline completes, your blog post is at:
 ai-brief-output/blog/my-idea-blog.md
 ```
 
-## 5. Check Pipeline Status
+## 6. Check Pipeline Status
 
 ```bash
 node src/cli.js status my-idea.md
@@ -56,7 +102,7 @@ node src/cli.js status my-idea.md
 
 Shows you which steps have completed, failed, or are still pending.
 
-## 6. Resume a Pipeline
+## 7. Resume a Pipeline
 
 If a step fails or you want to restart from a specific point:
 

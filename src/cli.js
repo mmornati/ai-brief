@@ -1,11 +1,16 @@
 #!/usr/bin/env node
 import { fileURLToPath } from 'url';
+import { loadDotenvFromRoot } from './utils/dotenv.js';
 import { runPipeline } from './pipeline/runner.js';
 import { getStatus, resume as resumePipeline } from './pipeline/tracker.js';
+import { createExecutePrompt } from './ai/provider.js';
+
+loadDotenvFromRoot();
 
 function parseArgs(args) {
   let inputFile = null;
   let format = null;
+  let provider = 'passthrough';
 
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
@@ -21,12 +26,24 @@ function parseArgs(args) {
         throw new Error('--format requires a value');
       }
       format = value;
+    } else if (arg === '--provider' || arg === '-p') {
+      const next = args[++i];
+      if (next === undefined) {
+        throw new Error('--provider requires a value');
+      }
+      provider = next;
+    } else if (arg.startsWith('--provider=')) {
+      const value = arg.slice('--provider='.length);
+      if (value === '') {
+        throw new Error('--provider requires a value');
+      }
+      provider = value;
     } else if (!arg.startsWith('--') && !arg.startsWith('-') && inputFile === null) {
       inputFile = arg;
     }
   }
 
-  return { inputFile, format };
+  return { inputFile, format, provider };
 }
 
 function formatStatusLine(idx, step) {
@@ -50,7 +67,7 @@ export const commands = {
   },
   run: {
     description: 'Execute the full pipeline on a markdown input file',
-    run(rawArgs) {
+    async run(rawArgs) {
       let parsed;
       try {
         parsed = parseArgs(rawArgs);
@@ -70,10 +87,28 @@ export const commands = {
         process.exit(1);
       }
 
-      runPipeline(parsed.inputFile, parsed.format).catch(err => {
+      if (parsed.provider !== 'passthrough') {
+        console.log(`Using AI provider: ${parsed.provider}`);
+      }
+
+      let executePrompt;
+      try {
+        executePrompt = await createExecutePrompt(parsed.provider);
+      } catch (err) {
         console.error(err.message);
         process.exit(1);
-      });
+      }
+
+      const options = {};
+      if (executePrompt) options.executePrompt = executePrompt;
+
+      try {
+        const outputPath = await runPipeline(parsed.inputFile, parsed.format, options);
+        console.log(`\nPipeline complete. Output: ${outputPath}`);
+      } catch (err) {
+        console.error(err.message);
+        process.exit(1);
+      }
     },
   },
   status: {
@@ -166,11 +201,17 @@ function printHelp() {
   }
   console.log('');
   console.log('Run command options:');
-  console.log('  --format <format>   Output format (blog|slides)');
+  console.log('  --format <format>    Output format (blog|slides)');
+  console.log('  --provider <name>    AI provider (passthrough|openai-compatible, default: passthrough)');
+  console.log('');
+  console.log('AI provider environment variables (for --provider openai-compatible):');
+  console.log('  AI_API_KEY           API key (required)');
+  console.log('  AI_BASE_URL          API base URL (default: https://api.openai.com/v1)');
+  console.log('  AI_MODEL             Model name (default: gpt-4o-mini)');
   console.log('');
   console.log('Examples:');
   console.log('  ai-brief run docs/idea.md --format blog');
-  console.log('  ai-brief run docs/idea.md --format slides');
+  console.log('  ai-brief run docs/idea.md --format slides --provider openai-compatible');
   console.log('  ai-brief status docs/idea.md');
   console.log('  ai-brief status docs/idea.md --format blog');
   console.log('  ai-brief resume docs/idea.md --format blog');

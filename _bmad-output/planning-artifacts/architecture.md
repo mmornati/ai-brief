@@ -458,6 +458,7 @@ ai-brief/
 - Use implementation patterns consistently across all components
 - Respect project structure, boundaries, and naming conventions
 - Refer to this document for all architectural questions
+- **Linked Services publishing:** See `architecture-addendum-linked-services.md` for the service publisher architecture
 
 **First Implementation Priority:**
 Resolve orchestration direction, then implement `install.sh` + scaffolding (`ai-brief init`) as the first story.

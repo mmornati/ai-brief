@@ -17,19 +17,45 @@ For installed environments (via `./install.sh`), the commands are also accessibl
 Execute the full pipeline on a markdown input file.
 
 ```bash
-node src/cli.js run <input-file> --format <format>
+node src/cli.js run <input-file> --format <format> [--provider <provider>]
 ```
 
 **Options:**
 - `--format <format>` — Output format (`blog` or `slides`). **Required.**
+- `--provider <provider>` — AI provider (`passthrough` or `openai-compatible`). Default: `passthrough`.
 
-**Example:**
+**AI Provider Environment Variables:**
+
+For `--provider openai-compatible`:
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `AI_API_KEY` | Yes | — | API key for the AI provider |
+| `AI_BASE_URL` | No | `https://api.openai.com/v1` | Base URL for OpenAI-compatible API |
+| `AI_MODEL` | No | `gpt-4o-mini` | Model to use for generation |
+
+These variables can be set in a `.env` file (see [Getting Started](./getting-started#2-configure-an-ai-provider)) or exported as shell environment variables. Values in your shell take precedence over `.env`. The `.env` file is loaded automatically — no extra flags needed.
+
+**Examples:**
 ```bash
+# Passthrough mode (no AI, for testing pipeline mechanics):
 node src/cli.js run docs/idea.md --format blog
-node src/cli.js run docs/talk-notes.md --format slides
+
+# With AI generation:
+export AI_API_KEY=sk-...
+node src/cli.js run docs/idea.md --format blog --provider openai-compatible
+
+# With custom endpoint (e.g. Ollama):
+export AI_API_KEY=ollama
+export AI_BASE_URL=http://localhost:11434/v1
+export AI_MODEL=llama3
+node src/cli.js run docs/idea.md --format blog --provider openai-compatible
+
+# Slides format:
+node src/cli.js run docs/talk-notes.md --format slides --provider openai-compatible
 ```
 
-The pipeline runs all six steps sequentially. Each step writes intermediate output to `ai-brief-output/steps/`. The final artifact is written to `ai-brief-output/{format}/{input-name}-{format}.md`.
+The pipeline runs all six steps sequentially. Each step writes intermediate output to `ai-brief-output/steps/`. The final artifact is written to `ai-brief-output/{format}/{input-name}-{format}.md`. When the pipeline completes, the output path is printed to the console.
 
 ---
 

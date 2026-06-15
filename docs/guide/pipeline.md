@@ -135,4 +135,25 @@ The runner is the core execution engine:
 5. On completion, calls the format orchestrator
 6. Handles errors per-step with failure markers
 
-The `executePrompt` function is pluggable — the default is a passthrough for testing, but in production it delegates to the AI assistant's prompt execution capability.
+## AI Provider System
+
+The `executePrompt` function is pluggable:
+
+- **`passthrough`** (default) — echoes the prompt as output. Useful for testing pipeline mechanics without an AI connection.
+- **`openai-compatible`** — calls an OpenAI-compatible API (including OpenAI, Ollama, LocalAI, etc.) to generate real content.
+
+Configure the provider via the `--provider` CLI flag:
+
+```bash
+node src/cli.js run my-idea.md --format blog --provider openai-compatible
+```
+
+Environment variables control the provider:
+
+| Variable | Purpose |
+|----------|---------|
+| `AI_API_KEY` | API key (required for `openai-compatible`) |
+| `AI_BASE_URL` | API base URL (default: `https://api.openai.com/v1`) |
+| `AI_MODEL` | Model name (default: `gpt-4o-mini`) |
+
+The provider architecture lives in `src/ai/` and can be extended by adding new provider modules to `src/ai/providers/` and registering them in `src/ai/provider.js`.
