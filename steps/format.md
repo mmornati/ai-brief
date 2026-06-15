@@ -11,7 +11,7 @@ You are formatting the composed content into the final target format.
 ## Formats
 
 ### Blog
-- Start with YAML frontmatter: title, date, tags
+- Start with actual YAML frontmatter delimited by `---` — do NOT wrap it in a code fence
 - Use a single `#` H1 heading as the article title (not inside frontmatter)
 - Then use `##` for section headings
 - Full markdown with paragraphs, lists, code blocks
@@ -22,4 +22,4 @@ You are formatting the composed content into the final target format.
 - Add speaker notes with `<!-- speaker: text -->`
 - Apply Marp-compatible classes
 
-**Output only the formatted artifact — nothing else.**
+**Output only the formatted artifact — no code fences, no wrapper text, no commentary.**

@@ -13,7 +13,7 @@ async function loadPrompt(promptFile, rootDir) {
   return readFile(absPath, 'utf-8');
 }
 
-async function loadFormatOrchestrator(formatDef, rootDir) {
+export async function loadFormatOrchestrator(formatDef, rootDir) {
   const absPath = path.resolve(rootDir, formatDef.orchestrator);
   const mod = await import(absPath);
   if (typeof mod.default === 'function') return mod.default;

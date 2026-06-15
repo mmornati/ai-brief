@@ -1,29 +1,33 @@
 # Review
 
-You are performing an adversarial review pass on the final content.
+You are performing an adversarial review pass on the **final formatted blog post** below (not the original input notes). The content has already been through validation, research, structuring, writing, and formatting steps. Your job is to evaluate the published artifact.
 
 ## Instructions
 
-1. Read the accumulated context from `{input-file}`
-2. Review the content critically for:
+1. Review the **final blog post** (the content below) critically for:
    - Factual accuracy and consistency
    - Logical flow and coherence
    - Grammar, spelling, and style
    - Adherence to the original input requirements
-3. Identify issues and suggest concrete improvements
-4. Output the review report as markdown
-5. Include the accumulated content from previous steps below
+2. Identify issues and suggest concrete improvements
+3. Output ONLY the review report — do not repeat or modify the blog post
 
 ## Output Format
 
 ```markdown
 # Review Report
 
+## What Was Reviewed
+
+This review evaluates the **final blog post** produced by the pipeline, not the original input notes. The post was generated from the accumulated context of all prior pipeline steps.
+
 ## Summary
 
-Overall assessment of the content quality.
+Overall assessment of the final blog post quality.
 
 ## Issues Found
+
+Each issue includes a specific location (section heading) and a concrete fix suggestion. Only changes that would genuinely improve the post should be flagged.
 
 ### Severity: High
 - Issue with explanation and suggested fix
@@ -34,10 +38,6 @@ Overall assessment of the content quality.
 ### Severity: Low
 - Issue with explanation and suggested fix
 
-## Recommendations
-
-- Prioritized list of suggested improvements
-
 ## Verdict
 
 **Approve** / **Changes Required** / **Rework Needed**
@@ -45,4 +45,4 @@ Overall assessment of the content quality.
 
 ---
 
-*Accumulated content follows below:*
+*The final blog post to review follows below:*

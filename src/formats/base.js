@@ -17,8 +17,11 @@ export class FormatWriter {
     if (typeof content !== 'string') return 'Untitled';
     const h1Match = content.match(/^# (.+)/m);
     if (h1Match) return h1Match[1].trim();
-    const fmMatch = content.match(/^---\n[\s\S]*?\ntitle:\s*"?([^"\n]+)"?/);
-    if (fmMatch) return fmMatch[1].trim();
+    const fmBlock = content.match(/^---\n([\s\S]*?)\n---/);
+    if (fmBlock) {
+      const titleLine = fmBlock[1].match(/^title:\s*"?([^"\n]+)"?/m);
+      if (titleLine) return titleLine[1].trim();
+    }
     if (inputFile) {
       const base = path.basename(inputFile, path.extname(inputFile));
       if (base) return base.replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());

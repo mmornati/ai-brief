@@ -1,9 +1,14 @@
 #!/usr/bin/env node
 import { fileURLToPath } from 'url';
+import path from 'node:path';
 import { loadDotenvFromRoot } from './utils/dotenv.js';
 import { runPipeline } from './pipeline/runner.js';
 import { getStatus, resume as resumePipeline } from './pipeline/tracker.js';
 import { createExecutePrompt } from './ai/provider.js';
+import { readFile, writeFile } from './utils/file.js';
+import { getProjectRoot } from './utils/paths.js';
+import { loadSteps, loadFormats } from './pipeline/step-loader.js';
+import { loadFormatOrchestrator } from './pipeline/runner.js';
 
 loadDotenvFromRoot();
 
@@ -56,6 +61,17 @@ function formatStatusLine(idx, step) {
     return `  ❌ ${num}. ${name} — FAILED (see .step-${idx + 1}.failed)`;
   }
   return `  ⏳ ${num}. ${name} — pending`;
+}
+
+function reviewPath(inputFile) {
+  const projectRoot = getProjectRoot();
+  const base = path.basename(inputFile, path.extname(inputFile));
+  return path.resolve(projectRoot, 'ai-brief-output', `${base}-review.md`);
+}
+
+function formatStepOutputPath(inputFile) {
+  const projectRoot = getProjectRoot();
+  return path.resolve(projectRoot, 'ai-brief-output', 'steps', '05-format.md');
 }
 
 export const commands = {
@@ -190,6 +206,89 @@ export const commands = {
       }
     },
   },
+  revise: {
+    description: 'Revise the final blog post incorporating review feedback',
+    async run(rawArgs) {
+      let parsed;
+      try {
+        parsed = parseArgs(rawArgs);
+      } catch (err) {
+        console.error(err.message);
+        process.exit(1);
+      }
+
+      if (!parsed.format) {
+        console.error('--format is required (blog|slides)');
+        process.exit(1);
+      }
+
+      if (!parsed.inputFile) {
+        console.error('Usage: ai-brief revise <input-file> --format <format> [--provider <provider>]');
+        process.exit(1);
+      }
+
+      const projectRoot = getProjectRoot();
+      const base = path.basename(parsed.inputFile, path.extname(parsed.inputFile));
+      const blogPath = path.resolve(projectRoot, 'ai-brief-output', 'steps', '05-format.md');
+      const reviewPath = path.resolve(projectRoot, 'ai-brief-output', `${base}-review.md`);
+
+      let blogContent;
+      let reviewContent;
+      try {
+        blogContent = await readFile(blogPath);
+        reviewContent = await readFile(reviewPath);
+      } catch {
+        console.error('No pipeline output found. Run the pipeline first:\n  ai-brief run <input-file> --format <format> --provider openai-compatible');
+        process.exit(1);
+      }
+
+      let executePrompt;
+      try {
+        executePrompt = await createExecutePrompt(parsed.provider);
+      } catch (err) {
+        console.error(err.message);
+        process.exit(1);
+      }
+
+      if (!executePrompt) {
+        console.error('--provider openai-compatible is required for revise');
+        process.exit(1);
+      }
+
+      console.log('Revising blog post with review feedback...');
+      const prompt = [
+        'You are revising a blog post to address feedback from an expert review.',
+        '',
+        '## Review Feedback',
+        reviewContent,
+        '',
+        '## Blog Post to Revise',
+        blogContent,
+        '',
+        '## Instructions',
+        '- Address every issue raised in the review feedback',
+        '- Improve the blog post without changing its structure unless the review specifically requests it',
+        '- Output ONLY the revised blog post (with YAML frontmatter) — no commentary, no wrapper',
+      ].join('\n');
+
+      const result = await executePrompt(prompt);
+      const preview = result.slice(0, 300).replace(/\n/g, '\n  ');
+      console.log(`  ${preview}${result.length > 300 ? '\n  ...' : ''}`);
+
+      const pipelinePath = path.resolve(projectRoot, 'pipeline-definition', 'pipeline.json');
+      const formatsPath = path.resolve(projectRoot, 'pipeline-definition', 'formats.json');
+      const formats = await loadFormats(formatsPath);
+      const formatDef = formats.find(f => f.name === parsed.format);
+      if (!formatDef) {
+        console.error(`Unknown format "${parsed.format}"`);
+        process.exit(1);
+      }
+
+      const orchestrator = await loadFormatOrchestrator(formatDef, projectRoot);
+      const outputPath = await orchestrator(result, { inputFile: parsed.inputFile, format: parsed.format });
+      console.log(`\nRevised output: ${outputPath}`);
+    },
+  },
 };
 
 function printHelp() {
@@ -215,6 +314,7 @@ function printHelp() {
   console.log('  ai-brief status docs/idea.md');
   console.log('  ai-brief status docs/idea.md --format blog');
   console.log('  ai-brief resume docs/idea.md --format blog');
+  console.log('  ai-brief revise docs/idea.md --format blog --provider openai-compatible');
 }
 
 const isMain = process.argv[1] === fileURLToPath(import.meta.url);

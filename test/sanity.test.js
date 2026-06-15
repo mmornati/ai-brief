@@ -11,7 +11,7 @@ describe('CLI entry point', () => {
   it('should export a commands map with expected keys', async () => {
     const mod = await import('../src/cli.js');
     expect(mod.commands).toBeDefined();
-    expect(Object.keys(mod.commands)).toEqual(['init', 'run', 'status', 'resume']);
+    expect(Object.keys(mod.commands)).toEqual(['init', 'run', 'status', 'resume', 'revise']);
   });
 
   it('every registered command has a description and a run function', async () => {
