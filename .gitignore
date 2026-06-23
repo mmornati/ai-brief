@@ -23,7 +23,8 @@ docs/.vitepress/cache/
 
 # Local environment and IDE config
 .env
-.env.*
+.env.local
+.env.production
 .opencode/
 .agents/
 _bmad/
