@@ -42,10 +42,11 @@ function claudeMasterFrontmatter() {
   ].join('\n');
 }
 
-export function generateSkill(pipelineDef, formatDef) {
+export function generateSkill(pipelineDef, formatDef, sourceRoot) {
   assertValidFormatName(formatDef && formatDef.name);
   const formatName = formatDef.name;
   const stepLines = readSteps(pipelineDef);
+  const prefix = sourceRoot ? `cd ${sourceRoot} && ` : '';
 
   const skillContent = [
     claudeFrontmatter(formatName),
@@ -56,7 +57,7 @@ export function generateSkill(pipelineDef, formatDef) {
     '## Usage',
     '',
     '```',
-    `node src/cli.js run <input> --format ${formatName}`,
+    `${prefix}node src/cli.js run "\$PWD/<input>" --format ${formatName}`,
     '```',
     '',
     '## Pipeline Steps',
@@ -68,9 +69,10 @@ export function generateSkill(pipelineDef, formatDef) {
   return { skillDir: formatName, skillContent };
 }
 
-export function generateMasterSkill(pipelineDef, formats) {
+export function generateMasterSkill(pipelineDef, formats, sourceRoot) {
   const stepLines = readSteps(pipelineDef);
   const formatLines = readFormatNames(formats);
+  const prefix = sourceRoot ? `cd ${sourceRoot} && ` : '';
 
   const skillContent = [
     claudeMasterFrontmatter(),
@@ -85,7 +87,7 @@ export function generateMasterSkill(pipelineDef, formats) {
     '## Usage',
     '',
     '```',
-    'node src/cli.js run <input> --format <format>',
+    `${prefix}node src/cli.js run "\$PWD/<input>" --format <format>`,
     '```',
     '',
     '## Pipeline Steps',

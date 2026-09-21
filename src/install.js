@@ -303,7 +303,7 @@ async function generateSkillsFromPipeline(targetDir, ides, dryRun, sourceRoot) {
       if (typeof ideGen.generateSkill !== 'function') continue;
       let skillDir, skillContent;
       try {
-        ({ skillDir, skillContent } = ideGen.generateSkill(pipelineDef, formatDef));
+        ({ skillDir, skillContent } = ideGen.generateSkill(pipelineDef, formatDef, sourceRoot));
       } catch (err) {
         console.warn(`  [warn] generateSkill for ${formatDef.name} failed (${err.message}), skipping`);
         continue;
@@ -328,7 +328,7 @@ async function generateSkillsFromPipeline(targetDir, ides, dryRun, sourceRoot) {
 
     let masterDir, masterContent;
     try {
-      ({ skillDir: masterDir, skillContent: masterContent } = ideGen.generateMasterSkill(pipelineDef, validFormatDefs));
+      ({ skillDir: masterDir, skillContent: masterContent } = ideGen.generateMasterSkill(pipelineDef, validFormatDefs, sourceRoot));
     } catch (err) {
       console.warn(`  [warn] generateMasterSkill for ${ide} failed (${err.message}), skipping`);
       continue;
